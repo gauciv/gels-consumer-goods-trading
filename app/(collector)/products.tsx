@@ -17,6 +17,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useCart } from '@/lib/cart';
 import { useAuth } from '@/lib/auth';
 import { formatCurrency, formatShortDate } from '@/lib/formatters';
+import { NotificationBell } from '@/components/NotificationBell';
 import type { Product } from '@/types';
 
 export default function ProductsScreen() {
@@ -103,6 +104,8 @@ export default function ProductsScreen() {
             >
               <Ionicons name="receipt-outline" size={22} color="#374151" />
             </TouchableOpacity>
+            {/* Notifications button */}
+            <NotificationBell />
             {/* Cart button */}
             <TouchableOpacity
               className="relative"

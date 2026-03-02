@@ -86,38 +86,38 @@ export default function ProductsScreen() {
     <View className="flex-1 bg-gray-50">
       {/* Custom Header */}
       <View
-        className="bg-white border-b border-gray-200 px-4 pb-3"
-        style={{ paddingTop: Platform.OS === 'ios' ? 54 : 40 }}
+        className="bg-white border-b border-gray-200 px-6 pb-6"
+        style={{ paddingTop: Platform.OS === 'ios' ? 64 : 50 }}
       >
         <View className="flex-row items-center justify-between">
           <View className="flex-1 mr-3">
-            <Text className="text-base font-bold text-gray-800" numberOfLines={1}>
+            <Text className="text-xl font-bold text-gray-800" numberOfLines={1}>
               {user?.branch_name || 'POS App'}
             </Text>
-            <Text className="text-xs text-gray-400 mt-0.5">{today}</Text>
+            <Text className="text-sm text-gray-400 mt-1">{today}</Text>
           </View>
-          <View className="flex-row items-center gap-3">
+          <View className="flex-row items-center gap-4">
             {/* Order History button */}
             <TouchableOpacity
               onPress={() => router.push('/(collector)/orders')}
             >
-              <Ionicons name="receipt-outline" size={22} color="#374151" />
+              <Ionicons name="receipt-outline" size={26} color="#374151" />
             </TouchableOpacity>
             {/* Cart button */}
             <TouchableOpacity
               className="relative"
               onPress={() => router.push('/(collector)/cart')}
             >
-              <Ionicons name="bag-outline" size={24} color="#374151" />
+              <Ionicons name="bag-outline" size={28} color="#374151" />
               {cartCount > 0 && (
-                <View className="absolute -top-2 -right-2 bg-blue-500 rounded-full min-w-[18px] h-[18px] items-center justify-center">
-                  <Text className="text-white text-[10px] font-bold">{cartCount}</Text>
+                <View className="absolute -top-2 -right-2 bg-blue-500 rounded-full min-w-[20px] h-[20px] items-center justify-center">
+                  <Text className="text-white text-[11px] font-bold">{cartCount}</Text>
                 </View>
               )}
             </TouchableOpacity>
             {/* Profile button */}
             <TouchableOpacity onPress={() => router.push('/(collector)/settings')}>
-              <Ionicons name="person-circle-outline" size={24} color="#9ca3af" />
+              <Ionicons name="person-circle-outline" size={28} color="#9ca3af" />
             </TouchableOpacity>
           </View>
         </View>

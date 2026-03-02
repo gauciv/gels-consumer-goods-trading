@@ -26,15 +26,17 @@ export default function OrdersScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const fetchOrders = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
+    setError(null);
     try {
       const result = await getOrders({ page_size: 50 });
       setOrders(result.data);
     } catch {
-      // fail silently
+      setError('Failed to load orders');
     } finally {
       if (!silent) setLoading(false);
     }
@@ -58,6 +60,21 @@ export default function OrdersScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50">
         <ActivityIndicator size="large" color="#3b82f6" />
+      </View>
+    );
+  }
+
+  if (error && orders.length === 0) {
+    return (
+      <View className="flex-1 items-center justify-center bg-gray-50 px-4">
+        <Ionicons name="cloud-offline-outline" size={48} color="#d1d5db" />
+        <Text className="text-gray-500 mt-3 text-center">{error}</Text>
+        <TouchableOpacity
+          className="mt-4 bg-blue-500 rounded-xl px-6 py-3"
+          onPress={() => fetchOrders()}
+        >
+          <Text className="text-white font-semibold">Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }

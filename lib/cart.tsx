@@ -28,6 +28,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = useCallback(
     (product: { id: string; name: string; price: number; stock_quantity: number }, quantity = 1) => {
+      if (product.price < 0 || product.stock_quantity < 0 || quantity <= 0) return;
       setItems((prev) => {
         const existing = prev.find((item) => item.product_id === product.id);
         if (existing) {

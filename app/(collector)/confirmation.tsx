@@ -9,6 +9,12 @@ export default function ConfirmationScreen() {
   const scaleAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // If no order number, redirect immediately
+    if (!orderNumber) {
+      router.replace('/(collector)/products');
+      return;
+    }
+
     // Animate checkmark scale-in
     Animated.spring(scaleAnim, {
       toValue: 1,
@@ -24,6 +30,8 @@ export default function ConfirmationScreen() {
 
     return () => clearTimeout(timer);
   }, []);
+
+  if (!orderNumber) return null;
 
   return (
     <View className="flex-1 bg-white items-center justify-center px-4">

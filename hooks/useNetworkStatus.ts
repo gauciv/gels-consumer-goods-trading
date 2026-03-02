@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
+import { API_BASE_URL } from '@/lib/constants';
 
-const CONSECUTIVE_FAILURES_THRESHOLD = 3;
+const CONSECUTIVE_FAILURES_THRESHOLD = 2;
 const POLL_INTERVAL = 30000;
 const TIMEOUT_MS = 8000;
 
@@ -26,9 +27,9 @@ export function useNetworkStatus() {
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
-        // Use Google's connectivity check (highly reliable, fast response)
-        await fetch('https://www.google.com/generate_204', {
-          method: 'HEAD',
+        // Ping our own API health endpoint instead of external service
+        await fetch(`${API_BASE_URL}/health`, {
+          method: 'GET',
           signal: controller.signal,
           cache: 'no-store',
         });

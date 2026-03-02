@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { createOrder } from '@/services/orders.service';
 import { useCart } from '@/lib/cart';
 import type { CreateOrderResponse } from '@/types';
@@ -7,12 +7,17 @@ export function useOrderSubmit() {
   const { items, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const submittingRef = useRef(false);
 
   async function submitOrder(notes?: string): Promise<CreateOrderResponse | null> {
     if (items.length === 0) {
       setError('Cart is empty');
       return null;
     }
+
+    // Prevent double-submit
+    if (submittingRef.current) return null;
+    submittingRef.current = true;
 
     setLoading(true);
     setError(null);
@@ -32,6 +37,7 @@ export function useOrderSubmit() {
       return null;
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   }
 

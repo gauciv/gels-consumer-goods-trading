@@ -57,6 +57,12 @@ export function useProducts() {
   }
 
   async function deleteProduct(id: string): Promise<void> {
+    // Null out FK references in order_items before hard-deleting the product
+    const { error: fkErr } = await supabase
+      .from('order_items')
+      .update({ product_id: null })
+      .eq('product_id', id);
+    if (fkErr) throw fkErr;
     const { error: err } = await supabase
       .from('products')
       .delete()

@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 interface PreviewRow {
   _id: string;
   name: string;
+  sku: string;
   price: number;
   stock_quantity: number;
 }
@@ -19,6 +20,17 @@ type ImportState =
   | null
   | { phase: 'preview'; rows: PreviewRow[] }
   | { phase: 'importing' };
+
+/** Derive a SKU prefix from the product name + 4-digit suffix. e.g. "Baking Powder" → BAK-4729 */
+function generateSku(name: string): string {
+  const prefix = name
+    .toUpperCase()
+    .replace(/[^A-Z]/g, '')
+    .slice(0, 3)
+    .padEnd(3, 'X');
+  const suffix = Math.floor(1000 + Math.random() * 9000);
+  return `${prefix}-${suffix}`;
+}
 
 function StockBadge({ qty }: { qty: number }) {
   const cls =
@@ -50,6 +62,7 @@ function parseCSV(text: string): PreviewRow[] {
       return {
         _id: crypto.randomUUID(),
         name: obj.name,
+        sku: obj.sku || generateSku(obj.name),
         price: parseFloat(obj.price) || 0,
         stock_quantity: parseInt(obj.stock_quantity, 10) || 0,
       };
@@ -141,8 +154,9 @@ export function ProductsPage() {
       if (replaceExisting) {
         await clearAllProducts();
       }
-      const mappedRows: Partial<Product>[] = rows.map(({ name, price, stock_quantity }) => ({
+      const mappedRows: Partial<Product>[] = rows.map(({ name, sku, price, stock_quantity }) => ({
         name,
+        sku: sku || generateSku(name),
         price,
         stock_quantity,
         is_active: true,
@@ -166,6 +180,7 @@ export function ProductsPage() {
         rows: prev.rows.map((r) => {
           if (r._id !== id) return r;
           if (field === 'name') return { ...r, name: value };
+          if (field === 'sku') return { ...r, sku: value };
           if (field === 'price') return { ...r, price: parseFloat(value) || 0 };
           if (field === 'stock_quantity') return { ...r, stock_quantity: parseInt(value, 10) || 0 };
           return r;
@@ -283,9 +298,6 @@ export function ProductsPage() {
                     <th className="px-3 py-2 text-left text-xs font-medium text-[#8aa0b8] uppercase tracking-wide">
                       Name
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-[#8aa0b8] uppercase tracking-wide hidden sm:table-cell">
-                      Category
-                    </th>
                     <th className="px-3 py-2 text-right text-xs font-medium text-[#8aa0b8] uppercase tracking-wide">
                       Price
                     </th>
@@ -311,9 +323,6 @@ export function ProductsPage() {
                       </td>
                       <td className="px-3 py-2">
                         <p className="text-xs text-[#0d1f35] font-medium">{product.name}</p>
-                      </td>
-                      <td className="px-3 py-2 text-xs text-[#4b5e73] hidden sm:table-cell">
-                        {product.categories?.name || '—'}
                       </td>
                       <td className="px-3 py-2 text-xs font-semibold text-[#0d1f35] text-right">
                         {formatCurrency(product.price)}
@@ -422,6 +431,9 @@ export function ProductsPage() {
                         <th className="px-3 py-2 text-left text-xs font-medium text-[#8aa0b8] uppercase tracking-wide">
                           Name
                         </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-[#8aa0b8] uppercase tracking-wide">
+                          SKU
+                        </th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-[#8aa0b8] uppercase tracking-wide">
                           Price
                         </th>
@@ -440,6 +452,14 @@ export function ProductsPage() {
                               value={row.name}
                               onChange={(e) => updatePreviewRow(row._id, 'name', e.target.value)}
                               className="w-full border border-[#dce8f5] rounded px-2 py-1 text-xs text-[#0d1f35] focus:outline-none focus:ring-1 focus:ring-[#1a56db]"
+                            />
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <input
+                              type="text"
+                              value={row.sku}
+                              onChange={(e) => updatePreviewRow(row._id, 'sku', e.target.value)}
+                              className="w-28 border border-[#dce8f5] rounded px-2 py-1 text-xs font-mono text-[#4b5e73] focus:outline-none focus:ring-1 focus:ring-[#1a56db]"
                             />
                           </td>
                           <td className="px-3 py-1.5">

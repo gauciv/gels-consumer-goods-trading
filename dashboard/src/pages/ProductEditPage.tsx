@@ -8,6 +8,12 @@ import toast from 'react-hot-toast';
 const inputCls = 'border border-[#dce8f5] rounded-md px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#1a56db] w-full';
 const labelCls = 'block text-xs font-medium text-[#4b5e73] mb-1';
 
+function generateSku(name: string): string {
+  const prefix = name.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3).padEnd(3, 'X');
+  const suffix = Math.floor(1000 + Math.random() * 9000);
+  return `${prefix}-${suffix}`;
+}
+
 export function ProductEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -76,7 +82,7 @@ export function ProductEditPage() {
     const payload: Partial<Product> = {
       name: name.trim(),
       description: description.trim() || null,
-      sku: sku.trim() || null,
+      sku: sku.trim() || generateSku(name.trim()),
       price: parsedPrice,
       stock_quantity: parsedStock,
       is_active: isActive,
@@ -165,14 +171,23 @@ export function ProductEditPage() {
 
           {/* SKU */}
           <div>
-            <label className={labelCls}>SKU</label>
-            <input
-              type="text"
-              value={sku}
-              onChange={(e) => setSku(e.target.value)}
-              placeholder="e.g. PRD-001"
-              className={inputCls}
-            />
+            <label className={labelCls}>SKU <span className="text-[#8aa0b8] font-normal">(auto-generated if blank)</span></label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={sku}
+                onChange={(e) => setSku(e.target.value)}
+                placeholder="e.g. PRD-001"
+                className={inputCls}
+              />
+              <button
+                type="button"
+                onClick={() => setSku(generateSku(name || 'PRD'))}
+                className="shrink-0 border border-[#dce8f5] text-[#4b5e73] text-xs px-2.5 py-1.5 rounded-md hover:bg-[#f0f4f8] transition-colors whitespace-nowrap"
+              >
+                Generate
+              </button>
+            </div>
           </div>
 
           {/* Price + Stock */}

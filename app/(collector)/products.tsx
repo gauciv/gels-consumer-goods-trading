@@ -96,6 +96,12 @@ export default function ProductsScreen() {
             <Text className="text-xs text-gray-400 mt-0.5">{today}</Text>
           </View>
           <View className="flex-row items-center gap-3">
+            {/* Notification button */}
+            <TouchableOpacity
+              onPress={() => router.push('/(collector)/notifications')}
+            >
+              <Ionicons name="notifications-outline" size={22} color="#374151" />
+            </TouchableOpacity>
             {/* Order History button */}
             <TouchableOpacity
               onPress={() => router.push('/(collector)/orders')}

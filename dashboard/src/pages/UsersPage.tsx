@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Wifi, WifiOff } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Wifi, WifiOff, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { UserDetailModal } from '@/components/UserDetailModal';
 import { clsx } from 'clsx';
@@ -10,6 +10,7 @@ type UserWithCode = Profile & { activation_code?: ActivationCode | null };
 
 const inputCls = 'border border-[#dce8f5] rounded-md px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#1a56db] w-full';
 const labelCls = 'block text-xs font-medium text-[#4b5e73] mb-1';
+const PAGE_SIZE = 20;
 
 export function UsersPage() {
   const [users, setUsers] = useState<Profile[]>([]);
@@ -19,6 +20,8 @@ export function UsersPage() {
   const [deleteTarget, setDeleteTarget] = useState<Profile | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState('');
   const [selectedUser, setSelectedUser] = useState<UserWithCode | null>(null);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
 
   // Form state
   const [nickname, setNickname] = useState('');
@@ -154,9 +157,38 @@ export function UsersPage() {
     return new Date().getTime() - new Date(user.last_seen_at).getTime() < 5 * 60 * 1000;
   }
 
+  const filteredUsers = useMemo(() => {
+    if (!search) return users;
+    const q = search.toLowerCase();
+    return users.filter(
+      (u) =>
+        (u.nickname || '').toLowerCase().includes(q) ||
+        (u.display_id || '').toLowerCase().includes(q) ||
+        (u.tag || '').toLowerCase().includes(q)
+    );
+  }, [users, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedUsers = filteredUsers.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const startIdx = (safePage - 1) * PAGE_SIZE;
+
   return (
     <div className="p-3 bg-[#f0f4f8] min-h-full">
-      <div className="flex items-center justify-end mb-3">
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8aa0b8]"
+          />
+          <input
+            type="text"
+            placeholder="Search by nickname, ID, or tag..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className="w-full pl-9 pr-3 py-2 text-xs border border-[#e2ecf9] rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-[#1a56db] focus:border-[#1a56db]"
+          />
+        </div>
         <button
           onClick={() => { resetForm(); setShowCreateModal(true); }}
           className="bg-[#1a56db] text-white text-xs px-3 py-1.5 rounded-md hover:bg-[#1447c0] flex items-center gap-1.5"
@@ -177,15 +209,19 @@ export function UsersPage() {
               </div>
             ))}
           </div>
-        ) : users.length === 0 ? (
+        ) : filteredUsers.length === 0 ? (
           <div className="py-16 text-center">
-            <p className="text-xs text-[#8aa0b8]">No collectors found</p>
-            <button
-              onClick={() => { resetForm(); setShowCreateModal(true); }}
-              className="mt-2 text-xs text-[#1a56db] hover:text-[#1447c0] font-medium"
-            >
-              Add your first collector
-            </button>
+            <p className="text-xs text-[#8aa0b8]">
+              {search ? 'No collectors match your search' : 'No collectors found'}
+            </p>
+            {!search && (
+              <button
+                onClick={() => { resetForm(); setShowCreateModal(true); }}
+                className="mt-2 text-xs text-[#1a56db] hover:text-[#1447c0] font-medium"
+              >
+                Add your first collector
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -200,7 +236,7 @@ export function UsersPage() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => (
+                {pagedUsers.map((user) => (
                   <tr
                     key={user.id}
                     className="border-b border-[#f0f4f8] hover:bg-[#f8fafd] cursor-pointer transition-colors"
@@ -277,6 +313,36 @@ export function UsersPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination footer */}
+        {!loading && filteredUsers.length > 0 && (
+          <div className="px-3 py-2 border-t border-[#e2ecf9] bg-[#f8fafd] flex justify-between items-center">
+            <p className="text-[10px] text-[#8aa0b8]">
+              Showing {startIdx + 1}–{Math.min(startIdx + PAGE_SIZE, filteredUsers.length)} of {filteredUsers.length}
+            </p>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={safePage === 1}
+                  onClick={() => setPage((p) => p - 1)}
+                  className="text-[10px] px-2 py-0.5 rounded border border-[#e2ecf9] text-[#4b5e73] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Prev
+                </button>
+                <span className="text-[10px] text-[#4b5e73]">
+                  Page {safePage} of {totalPages}
+                </span>
+                <button
+                  disabled={safePage === totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="text-[10px] px-2 py-0.5 rounded border border-[#e2ecf9] text-[#4b5e73] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

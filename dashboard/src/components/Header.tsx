@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { LogOut, Menu, ChevronDown, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { LogOut, Menu, ChevronDown, User, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSidebar } from '@/contexts/SidebarContext';
 
@@ -38,8 +39,19 @@ function LiveClock() {
 export function Header() {
   const { signOut } = useAuth();
   const { toggle, isMobile } = useSidebar();
+  const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = searchValue.trim();
+    if (q) {
+      navigate(`/orders?search=${encodeURIComponent(q)}`);
+      setSearchValue('');
+    }
+  }
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -62,6 +74,19 @@ export function Header() {
             <Menu size={18} />
           </button>
         )}
+        <form onSubmit={handleSearch} className="relative hidden sm:block">
+          <Search
+            size={13}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8aa0b8]"
+          />
+          <input
+            type="text"
+            placeholder="Search orders..."
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            className="w-48 pl-8 pr-3 py-1 text-xs border border-[#e2ecf9] rounded-lg bg-[#f8fafd] focus:outline-none focus:ring-1 focus:ring-[#1a56db] focus:border-[#1a56db] focus:bg-white placeholder:text-[#8aa0b8] transition-colors"
+          />
+        </form>
       </div>
       <div className="flex items-center gap-4">
         <LiveClock />

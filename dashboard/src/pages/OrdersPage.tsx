@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useRealtimeOrders } from '@/hooks/useRealtimeOrders';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { supabase } from '@/lib/supabase';
@@ -16,12 +16,21 @@ const PAGE_SIZE = 20;
 
 export function OrdersPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(searchParams.get('search') || '');
   const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
 
   const { orders, loading, error, refetch } = useRealtimeOrders();
+
+  useEffect(() => {
+    const q = searchParams.get('search') || '';
+    if (q) {
+      setSearch(q);
+      setPage(1);
+    }
+  }, [searchParams]);
 
   async function handleDeleteOrder() {
     if (!deleteTarget) return;

@@ -59,11 +59,19 @@ function MetricCard({
 
 function StatusDistribution({ orders }: { orders: Order[] }) {
   const statuses = ['pending', 'confirmed', 'processing', 'completed', 'cancelled'];
-  const counts = statuses.map((s) => ({
-    status: s,
-    count: orders.filter((o) => o.status === s).length,
-  }));
+  const counts = statuses
+    .map((s) => ({
+      status: s,
+      count: orders.filter((o) => o.status === s).length,
+    }))
+    .filter(({ count }) => count > 0);
   const total = orders.length;
+
+  if (counts.length === 0) {
+    return (
+      <p className="text-xs text-[#8aa0b8] text-center py-4">No orders to display</p>
+    );
+  }
 
   return (
     <div className="space-y-2">
@@ -81,11 +89,11 @@ function StatusDistribution({ orders }: { orders: Order[] }) {
             </span>
             <div className="flex-1 bg-[#f0f4f8] rounded-full h-1.5">
               <div
-                className="h-1.5 rounded-full bg-[#1a56db]"
+                className="h-1.5 rounded-full bg-[#1a56db] transition-all"
                 style={{ width: `${pct}%` }}
               />
             </div>
-            <span className="text-xs text-[#4b5e73] w-6 text-right">{count}</span>
+            <span className="text-xs text-[#4b5e73] w-8 text-right">{pct}%</span>
           </div>
         );
       })}
@@ -239,8 +247,28 @@ export function DashboardPage() {
               ))}
             </div>
           ) : recentOrders.length === 0 ? (
-            <div className="py-10 text-center">
-              <p className="text-xs text-[#8aa0b8]">No orders yet</p>
+            <div className="py-12 text-center px-4">
+              <div className="w-10 h-10 rounded-full bg-[#f0f4f8] flex items-center justify-center mx-auto mb-3">
+                <ShoppingCart size={18} className="text-[#8aa0b8]" />
+              </div>
+              <p className="text-sm font-medium text-[#0d1f35] mb-1">No orders yet</p>
+              <p className="text-xs text-[#8aa0b8] mb-4">
+                Orders will appear here as collectors submit them from the mobile app.
+              </p>
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  onClick={() => navigate('/orders')}
+                  className="px-3 py-1.5 text-xs font-medium text-[#1a56db] bg-[#e2ecf9] rounded-lg hover:bg-[#d0dff2] transition-colors"
+                >
+                  View Orders
+                </button>
+                <button
+                  onClick={() => navigate('/products')}
+                  className="px-3 py-1.5 text-xs font-medium text-[#4b5e73] bg-[#f0f4f8] rounded-lg hover:bg-[#e2ecf9] transition-colors"
+                >
+                  View Products
+                </button>
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -296,7 +324,7 @@ export function DashboardPage() {
         </div>
 
         {/* Right column */}
-        <div className="lg:w-[260px] flex-shrink-0 space-y-2">
+        <div className="lg:w-[280px] flex-shrink-0 space-y-2">
           {/* Status breakdown */}
           <div className="bg-white border border-[#e2ecf9] rounded-lg p-4">
             <p className="text-xs font-semibold text-[#4b5e73] uppercase tracking-wide mb-3">
@@ -325,7 +353,13 @@ export function DashboardPage() {
                 ))}
               </div>
             ) : todayOrders.length === 0 ? (
-              <p className="text-xs text-[#8aa0b8] text-center py-4">No activity today</p>
+              <div className="text-center py-6">
+                <div className="w-8 h-8 rounded-full bg-[#f0f4f8] flex items-center justify-center mx-auto mb-2">
+                  <Clock size={14} className="text-[#8aa0b8]" />
+                </div>
+                <p className="text-xs text-[#8aa0b8]">No activity today</p>
+                <p className="text-[10px] text-[#a8bdd4] mt-1">Orders placed today will appear here</p>
+              </div>
             ) : (
               <div className="space-y-2 max-h-[240px] overflow-y-auto">
                 {todayOrders.slice(0, 8).map((order) => (

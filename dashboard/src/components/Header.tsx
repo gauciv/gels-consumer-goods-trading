@@ -23,7 +23,7 @@ function LiveClock() {
 }
 
 export function Header() {
-  const { user, signOut } = useAuth();
+  const { signOut } = useAuth();
   const { toggle, isMobile } = useSidebar();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);

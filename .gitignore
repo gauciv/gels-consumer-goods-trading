@@ -43,3 +43,7 @@ __pycache__/
 
 .vscode/
 settings.json
+
+# Data files (CSV, XLSX, chat replays)
+*.csv
+*.chatreplay.json

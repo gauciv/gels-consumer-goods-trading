@@ -71,11 +71,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
+        // Account deactivated - sign out
+        if (!data.is_active) {
+          console.warn('Account deactivated, signing out');
+          await supabase.auth.signOut();
+          setUser(null);
+          setSession(null);
+          setIsLoading(false);
+          return;
+        }
+
         setUser({
           id: data.id,
           email: data.email,
           full_name: data.full_name,
           role: data.role,
+          is_active: data.is_active,
         });
         setIsLoading(false);
         return;

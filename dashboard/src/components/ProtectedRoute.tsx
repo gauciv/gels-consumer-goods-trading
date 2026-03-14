@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, signOut } = useAuth();
 
   if (isLoading) {
     return (
@@ -12,7 +12,13 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!isAuthenticated || user?.role !== 'admin') {
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Authenticated but not an admin — sign out to clear session and redirect
+  if (user?.role !== 'admin') {
+    signOut();
     return <Navigate to="/login" replace />;
   }
 

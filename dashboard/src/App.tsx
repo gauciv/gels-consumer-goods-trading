@@ -16,7 +16,8 @@ import { CompanyProfilePage } from '@/pages/CompanyProfilePage';
 import { ForecastPage } from '@/pages/ForecastPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { AnalyticsPage } from '@/pages/AnalyticsPage';
-import { StoresPage } from '@/pages/StoresPage';
+
+import { CreateOrderPage } from '@/pages/CreateOrderPage';
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -47,8 +48,8 @@ export default function App() {
                   <Routes>
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/orders" element={<OrdersPage />} />
+                    <Route path="/orders/new" element={<CreateOrderPage />} />
                     <Route path="/orders/:id" element={<OrderDetailPage />} />
-                    <Route path="/stores" element={<StoresPage />} />
                     <Route path="/forecast" element={<ForecastPage />} />
                     <Route path="/analytics" element={<AnalyticsPage />} />
                     <Route path="/products" element={<ProductsPage />} />

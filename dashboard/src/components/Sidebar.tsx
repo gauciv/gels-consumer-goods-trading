@@ -12,7 +12,6 @@ import {
   PanelLeftClose,
   PanelLeft,
   MousePointerClick,
-  Store,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebar, SidebarMode } from '@/contexts/SidebarContext';
@@ -23,7 +22,6 @@ const navGroups = [
     items: [
       { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { to: '/orders', label: 'Orders', icon: ShoppingCart },
-      { to: '/stores', label: 'Stores', icon: Store },
     ],
   },
   {
@@ -52,7 +50,6 @@ const navGroups = [
 const pageLabels: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/orders': 'Orders',
-  '/stores': 'Stores',
   '/forecast': 'Forecast',
   '/analytics': 'Analytics',
   '/products': 'Products',

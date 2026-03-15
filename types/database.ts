@@ -74,3 +74,21 @@ export interface InventoryLog {
   performed_by: string;
   created_at: string;
 }
+
+export type NotificationType =
+  | 'order_status_changed'
+  | 'low_stock'
+  | 'out_of_stock'
+  | 'price_changed'
+  | 'new_product';
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  data: Record<string, any>;
+  is_read: boolean;
+  created_at: string;
+}

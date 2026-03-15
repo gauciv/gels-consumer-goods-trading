@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import { formatCurrency } from '@/lib/formatters';
+import { cn } from '@/lib/utils';
 import {
   Search,
   ChevronUp,
@@ -8,7 +10,9 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Box,
+  AlertTriangle,
+  BarChart2,
+  Target,
 } from 'lucide-react';
 
 interface ForecastRow {
@@ -31,41 +35,46 @@ interface ActualSalesRow {
   actual_duty_days: number;
 }
 
-interface MergedRow extends ForecastRow {
-  actual_units: number;
+interface ProductStock {
+  id: string;
+  stock_quantity: number;
 }
 
-type SortKey = 'product_name' | 'avg_daily_sales' | 'forecast_units' | 'actual_units';
+interface MergedRow extends ForecastRow {
+  actual_units: number;
+  accuracy: number;
+  variance: number;
+  stock_quantity: number;
+  stock_covers_days: number;
+}
 
-const HISTORY_WEEKS = 12;
-const FORECAST_DAYS = 14;
-const PAGE_SIZE = 20;
+type SortKey = 'product_name' | 'avg_daily_sales' | 'forecast_units' | 'actual_units' | 'accuracy' | 'forecast_revenue' | 'stock_covers_days';
+
+const HISTORY_OPTIONS = [4, 8, 12] as const;
+const FORECAST_OPTIONS = [7, 14, 30] as const;
+const PAGE_SIZE = 15;
 
 export function ForecastPage() {
   const [loading, setLoading] = useState(true);
   const [forecasts, setForecasts] = useState<ForecastRow[]>([]);
   const [actuals, setActuals] = useState<Map<string, ActualSalesRow>>(new Map());
+  const [stockMap, setStockMap] = useState<Map<string, number>>(new Map());
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('forecast_units');
   const [sortAsc, setSortAsc] = useState(false);
   const [page, setPage] = useState(1);
+  const [historyWeeks, setHistoryWeeks] = useState(12);
+  const [forecastDays, setForecastDays] = useState(14);
+  const [showOnlyAlerts, setShowOnlyAlerts] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  async function loadData() {
+  async function loadData(weeks: number, days: number) {
     setLoading(true);
     try {
-      const [{ data: forecastData, error: fErr }, { data: actualData, error: aErr }] =
+      const [{ data: forecastData, error: fErr }, { data: actualData, error: aErr }, { data: stockData }] =
         await Promise.all([
-          supabase.rpc('get_product_forecasts', {
-            p_history_weeks: HISTORY_WEEKS,
-            p_forecast_days: FORECAST_DAYS,
-          }),
-          supabase.rpc('get_actual_sales', {
-            p_days: FORECAST_DAYS,
-          }),
+          supabase.rpc('get_product_forecasts', { p_history_weeks: weeks, p_forecast_days: days }),
+          supabase.rpc('get_actual_sales', { p_days: days }),
+          supabase.from('products').select('id, stock_quantity').eq('is_active', true),
         ]);
 
       if (fErr) console.error('Forecast error:', fErr);
@@ -73,76 +82,115 @@ export function ForecastPage() {
 
       setForecasts((forecastData as ForecastRow[]) || []);
 
-      const map = new Map<string, ActualSalesRow>();
+      const aMap = new Map<string, ActualSalesRow>();
       if (actualData) {
-        for (const row of actualData as ActualSalesRow[]) {
-          map.set(row.product_id, row);
-        }
+        for (const row of actualData as ActualSalesRow[]) aMap.set(row.product_id, row);
       }
-      setActuals(map);
+      setActuals(aMap);
+
+      const sMap = new Map<string, number>();
+      if (stockData) {
+        for (const row of stockData as ProductStock[]) sMap.set(row.id, row.stock_quantity);
+      }
+      setStockMap(sMap);
     } finally {
       setLoading(false);
     }
   }
 
+  useEffect(() => {
+    loadData(historyWeeks, forecastDays);
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyWeeks, forecastDays]);
+
+  // Merge all data
   const rows = useMemo(() => {
-    let data: MergedRow[] = forecasts.map((f) => ({
-      ...f,
-      actual_units: actuals.get(f.product_id)?.actual_units || 0,
-    }));
+    let data: MergedRow[] = forecasts.map((f) => {
+      const actual = actuals.get(f.product_id)?.actual_units || 0;
+      const accuracy = f.forecast_units > 0
+        ? Math.max(0, 100 - Math.abs(((actual - f.forecast_units) / f.forecast_units) * 100))
+        : actual === 0 ? 100 : 0;
+      const variance = actual - f.forecast_units;
+      const stock = stockMap.get(f.product_id) ?? 0;
+      const stock_covers_days = f.avg_daily_sales > 0 ? stock / f.avg_daily_sales : stock > 0 ? 999 : 0;
+      return { ...f, actual_units: actual, accuracy, variance, stock_quantity: stock, stock_covers_days };
+    });
 
     if (search) {
       const q = search.toLowerCase();
-      data = data.filter((d) => d.product_name.toLowerCase().includes(q));
+      data = data.filter((d) => d.product_name.toLowerCase().includes(q) || (d.sku || '').toLowerCase().includes(q));
+    }
+
+    if (showOnlyAlerts) {
+      data = data.filter((d) => d.stock_quantity < d.forecast_units);
     }
 
     data.sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
-        case 'product_name':
-          cmp = a.product_name.localeCompare(b.product_name);
-          break;
-        case 'avg_daily_sales':
-          cmp = a.avg_daily_sales - b.avg_daily_sales;
-          break;
-        case 'forecast_units':
-          cmp = a.forecast_units - b.forecast_units;
-          break;
-        case 'actual_units':
-          cmp = a.actual_units - b.actual_units;
-          break;
+        case 'product_name': cmp = a.product_name.localeCompare(b.product_name); break;
+        case 'avg_daily_sales': cmp = a.avg_daily_sales - b.avg_daily_sales; break;
+        case 'forecast_units': cmp = a.forecast_units - b.forecast_units; break;
+        case 'actual_units': cmp = a.actual_units - b.actual_units; break;
+        case 'accuracy': cmp = a.accuracy - b.accuracy; break;
+        case 'forecast_revenue': cmp = (a.forecast_units * a.price) - (b.forecast_units * b.price); break;
+        case 'stock_covers_days': cmp = a.stock_covers_days - b.stock_covers_days; break;
       }
       return sortAsc ? cmp : -cmp;
     });
 
     return data;
-  }, [forecasts, actuals, search, sortKey, sortAsc]);
+  }, [forecasts, actuals, stockMap, search, sortKey, sortAsc, showOnlyAlerts]);
 
+  // Summary stats
   const summary = useMemo(() => {
     const withData = forecasts.filter((f) => f.total_units_sold > 0).length;
-    const totalUnits = forecasts.reduce((s, f) => s + f.forecast_units, 0);
+    const totalForecastUnits = forecasts.reduce((s, f) => s + f.forecast_units, 0);
     const totalCases = forecasts.reduce((s, f) => s + f.forecast_cases, 0);
-    return { total: forecasts.length, withData, totalUnits, totalCases };
+    const totalForecastRevenue = forecasts.reduce((s, f) => s + f.forecast_units * f.price, 0);
+    const totalActual = forecasts.reduce((s, f) => s + (actuals.get(f.product_id)?.actual_units || 0), 0);
+    const avgAccuracy = totalForecastUnits > 0
+      ? Math.max(0, 100 - Math.abs(((totalActual - totalForecastUnits) / totalForecastUnits) * 100))
+      : 0;
+    const reorderAlerts = forecasts.filter((f) => {
+      const stock = stockMap.get(f.product_id) ?? 0;
+      return stock < f.forecast_units;
+    }).length;
+
+    return { total: forecasts.length, withData, totalForecastUnits, totalCases, totalForecastRevenue, avgAccuracy, reorderAlerts };
+  }, [forecasts, actuals, stockMap]);
+
+  // Top demand products for visual bar
+  const topDemand = useMemo(() => {
+    return [...forecasts]
+      .filter((f) => f.forecast_units > 0)
+      .sort((a, b) => b.forecast_units - a.forecast_units)
+      .slice(0, 8);
   }, [forecasts]);
 
+  // Reorder alerts
+  const reorderItems = useMemo(() => {
+    return forecasts
+      .map((f) => {
+        const stock = stockMap.get(f.product_id) ?? 0;
+        const deficit = f.forecast_units - stock;
+        return { ...f, stock_quantity: stock, deficit };
+      })
+      .filter((f) => f.deficit > 0)
+      .sort((a, b) => b.deficit - a.deficit)
+      .slice(0, 6);
+  }, [forecasts, stockMap]);
+
   function toggleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortAsc((v) => !v);
-    } else {
-      setSortKey(key);
-      setSortAsc(false);
-    }
+    if (sortKey === key) setSortAsc((v) => !v);
+    else { setSortKey(key); setSortAsc(false); }
     setPage(1);
   }
 
   function SortIcon({ column }: { column: SortKey }) {
-    if (sortKey !== column)
-      return <ChevronDown size={12} className="text-[#8FAABE]/30 ml-0.5 inline" />;
-    return sortAsc ? (
-      <ChevronUp size={12} className="text-[#5B9BD5] ml-0.5 inline" />
-    ) : (
-      <ChevronDown size={12} className="text-[#5B9BD5] ml-0.5 inline" />
-    );
+    if (sortKey !== column) return <ChevronDown size={12} className="text-[#8FAABE]/30 ml-0.5 inline" />;
+    return sortAsc ? <ChevronUp size={12} className="text-[#5B9BD5] ml-0.5 inline" /> : <ChevronDown size={12} className="text-[#5B9BD5] ml-0.5 inline" />;
   }
 
   function formatCases(cases: number, remainder: number, cartonSize: number | null) {
@@ -154,247 +202,293 @@ export function ForecastPage() {
     return parts.join(' ');
   }
 
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedRows = rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const startIdx = (safePage - 1) * PAGE_SIZE;
+
   return (
     <div className="p-3 bg-[#0D1F33] min-h-full">
-      {/* Search + info */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div>
+          <h1 className="text-sm font-bold text-[#E8EDF2]">Demand Forecast</h1>
+          <p className="text-[10px] text-[#8FAABE]/50">Weighted moving average predictions for inventory planning</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-[#8FAABE]/50">History:</span>
+            <div className="flex bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg overflow-hidden">
+              {HISTORY_OPTIONS.map((w) => (
+                <button key={w} onClick={() => setHistoryWeeks(w)} className={cn('px-2 py-1 text-[10px] font-medium transition-colors', historyWeeks === w ? 'bg-[#5B9BD5] text-white' : 'text-[#E8EDF2]/80 hover:bg-[#1A3755]')}>
+                  {w}w
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-[#8FAABE]/50">Forecast:</span>
+            <div className="flex bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg overflow-hidden">
+              {FORECAST_OPTIONS.map((d) => (
+                <button key={d} onClick={() => setForecastDays(d)} className={cn('px-2 py-1 text-[10px] font-medium transition-colors', forecastDays === d ? 'bg-[#5B9BD5] text-white' : 'text-[#E8EDF2]/80 hover:bg-[#1A3755]')}>
+                  {d}d
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <div className="bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-[#0D1F33] flex items-center justify-center"><Package size={14} className="text-[#5B9BD5]" /></div>
+            <div>
+              <p className="text-[10px] text-[#8FAABE]/50 uppercase tracking-wide">Products</p>
+              <p className="text-sm font-bold text-[#E8EDF2] tabular-nums">{summary.withData} <span className="text-[10px] font-normal text-[#8FAABE]/50">/ {summary.total}</span></p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-[#0D1F33] flex items-center justify-center"><TrendingUp size={14} className="text-[#5B9BD5]" /></div>
+            <div>
+              <p className="text-[10px] text-[#8FAABE]/50 uppercase tracking-wide">Forecast Demand</p>
+              <p className="text-sm font-bold text-[#E8EDF2] tabular-nums">{summary.totalForecastUnits.toLocaleString()} <span className="text-[10px] font-normal text-[#8FAABE]/50">units ({summary.totalCases} cases)</span></p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-[#0D1F33] flex items-center justify-center"><BarChart2 size={14} className="text-[#5B9BD5]" /></div>
+            <div>
+              <p className="text-[10px] text-[#8FAABE]/50 uppercase tracking-wide">Forecast Revenue</p>
+              <p className="text-sm font-bold text-[#E8EDF2] tabular-nums">{formatCurrency(summary.totalForecastRevenue)}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-[#0D1F33] flex items-center justify-center"><Target size={14} className="text-[#5B9BD5]" /></div>
+            <div>
+              <p className="text-[10px] text-[#8FAABE]/50 uppercase tracking-wide">Model Accuracy</p>
+              <p className={cn('text-sm font-bold tabular-nums', summary.avgAccuracy >= 80 ? 'text-[#98C379]' : summary.avgAccuracy >= 60 ? 'text-[#E5C07B]' : 'text-[#E06C75]')}>
+                {summary.avgAccuracy.toFixed(1)}%
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Row: Top Demand + Reorder Alerts */}
+      <div className="grid lg:grid-cols-2 gap-4 mb-4">
+        {/* Top Demand Bar Visual */}
+        <div className="bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg p-4">
+          <p className="text-xs font-semibold text-[#E8EDF2] mb-3">Top Demand ({forecastDays}-day forecast)</p>
+          {loading ? (
+            <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="h-5 bg-[#1A3755] rounded animate-pulse" />)}</div>
+          ) : topDemand.length === 0 ? (
+            <p className="text-xs text-[#8FAABE]/50 text-center py-4">No forecast data</p>
+          ) : (
+            <div className="space-y-2">
+              {topDemand.map((f) => {
+                const maxUnits = topDemand[0]?.forecast_units || 1;
+                const pct = (f.forecast_units / maxUnits) * 100;
+                return (
+                  <div key={f.product_id}>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[11px] text-[#E8EDF2] truncate flex-1 mr-2">{f.product_name}</span>
+                      <span className="text-[10px] font-semibold text-[#E8EDF2] tabular-nums flex-shrink-0">{f.forecast_units} units</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-[#0D1F33] rounded-full">
+                      <div className="h-1.5 rounded-full bg-[#5B9BD5] transition-all duration-300" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Reorder Alerts */}
+        <div className="bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg p-4">
+          <div className="flex items-center gap-1.5 mb-3">
+            <AlertTriangle size={13} className={summary.reorderAlerts > 0 ? 'text-[#E5C07B]' : 'text-[#8FAABE]/30'} />
+            <p className="text-xs font-semibold text-[#E8EDF2]">Reorder Alerts</p>
+            {summary.reorderAlerts > 0 && (
+              <span className="text-[9px] bg-[#E5C07B]/15 text-[#E5C07B] px-1.5 py-0.5 rounded font-medium tabular-nums">{summary.reorderAlerts}</span>
+            )}
+          </div>
+          {loading ? (
+            <div className="space-y-2">{[...Array(4)].map((_, i) => <div key={i} className="h-5 bg-[#1A3755] rounded animate-pulse" />)}</div>
+          ) : reorderItems.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-xs text-[#98C379] font-medium">All products sufficiently stocked</p>
+              <p className="text-[10px] text-[#8FAABE]/40 mt-1">Current stock covers {forecastDays}-day forecast demand</p>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {reorderItems.map((f) => {
+                const severity = f.stock_quantity === 0 ? 'out' : f.stock_quantity < f.forecast_units * 0.3 ? 'critical' : 'low';
+                const dotColor = severity === 'out' ? 'bg-[#E06C75]' : severity === 'critical' ? 'bg-[#D19A66]' : 'bg-[#E5C07B]';
+                const label = severity === 'out' ? 'Out of stock' : `${f.stock_quantity} in stock`;
+                return (
+                  <div key={f.product_id} className="flex items-center gap-2 py-1 px-2 -mx-2 rounded hover:bg-[#1A3755]/40 transition-colors">
+                    <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', dotColor)} />
+                    <span className="text-[11px] text-[#E8EDF2] flex-1 truncate">{f.product_name}</span>
+                    <span className="text-[9px] text-[#8FAABE]/50 tabular-nums">{label}</span>
+                    <span className="text-[10px] font-semibold text-[#E06C75] tabular-nums whitespace-nowrap">need +{f.deficit}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Search + filter */}
+      <div className="flex items-center gap-3 mb-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8FAABE]/40"
-          />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8FAABE]/40" />
           <input
             type="text"
-            placeholder="Search products..."
+            placeholder="Search products or SKU..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="w-full pl-9 pr-3 py-2 text-xs border border-[#1E3F5E]/60 rounded-lg bg-[#162F4D] text-[#E8EDF2] placeholder-[#8FAABE]/40 focus:outline-none focus:ring-2 focus:ring-[#5B9BD5]"
           />
         </div>
-        <p className="text-[10px] text-[#8FAABE]/50">
-          {FORECAST_DAYS}-day forecast &middot; {HISTORY_WEEKS}-week weighted avg
-        </p>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#0D1F33] flex items-center justify-center">
-              <Package size={14} className="text-[#5B9BD5]" />
-            </div>
-            <div>
-              <p className="text-[10px] text-[#8FAABE]/50 uppercase tracking-wide">Products</p>
-              <p className="text-sm font-bold text-[#E8EDF2]">
-                {summary.withData}{' '}
-                <span className="text-[10px] font-normal text-[#8FAABE]/50">
-                  / {summary.total}
-                </span>
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#0D1F33] flex items-center justify-center">
-              <TrendingUp size={14} className="text-[#5B9BD5]" />
-            </div>
-            <div>
-              <p className="text-[10px] text-[#8FAABE]/50 uppercase tracking-wide">Total Forecast</p>
-              <p className="text-sm font-bold text-[#E8EDF2]">
-                {summary.totalUnits.toLocaleString()}{' '}
-                <span className="text-[10px] font-normal text-[#8FAABE]/50">units</span>
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#0D1F33] flex items-center justify-center">
-              <Box size={14} className="text-[#5B9BD5]" />
-            </div>
-            <div>
-              <p className="text-[10px] text-[#8FAABE]/50 uppercase tracking-wide">Total Cases</p>
-              <p className="text-sm font-bold text-[#E8EDF2]">
-                {summary.totalCases.toLocaleString()}
-              </p>
-            </div>
-          </div>
-        </div>
+        <button
+          onClick={() => { setShowOnlyAlerts((v) => !v); setPage(1); }}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors',
+            showOnlyAlerts
+              ? 'bg-[#E5C07B]/15 border-[#E5C07B]/30 text-[#E5C07B]'
+              : 'bg-[#162F4D] border-[#1E3F5E]/60 text-[#8FAABE]/60 hover:text-[#8FAABE]'
+          )}
+        >
+          <AlertTriangle size={12} />
+          Reorder only
+        </button>
+        <p className="text-[10px] text-[#8FAABE]/40 ml-auto tabular-nums">{rows.length} products</p>
       </div>
 
       {/* Forecast Table */}
       <div className="bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg overflow-hidden">
         {loading ? (
-          <div className="p-4 space-y-2">
-            {[...Array(10)].map((_, i) => (
-              <div key={i} className="flex gap-3 animate-pulse py-2">
-                <div className="h-3 bg-[#1A3755] rounded flex-1" />
-                <div className="h-3 bg-[#1A3755] rounded w-12" />
-                <div className="h-3 bg-[#1A3755] rounded w-12" />
-                <div className="h-3 bg-[#1A3755] rounded w-16" />
-                <div className="h-3 bg-[#1A3755] rounded w-12" />
-                <div className="h-3 bg-[#1A3755] rounded w-12" />
-              </div>
-            ))}
-          </div>
+          <div className="p-4 space-y-2">{[...Array(10)].map((_, i) => <div key={i} className="flex gap-3 animate-pulse py-2"><div className="h-3 bg-[#1A3755] rounded flex-1" /><div className="h-3 bg-[#1A3755] rounded w-12" /><div className="h-3 bg-[#1A3755] rounded w-12" /><div className="h-3 bg-[#1A3755] rounded w-16" /><div className="h-3 bg-[#1A3755] rounded w-12" /></div>)}</div>
         ) : rows.length === 0 ? (
           <div className="py-12 text-center">
             <Package size={32} className="mx-auto text-[#8FAABE]/30 mb-2" />
-            <p className="text-xs text-[#8FAABE]/50">
-              {search ? 'No products match your search' : 'No forecast data available'}
-            </p>
-            {!search && (
-              <p className="text-[10px] text-[#8FAABE]/30 mt-1">
-                Run the import script to load historical sales data
-              </p>
-            )}
+            <p className="text-xs text-[#8FAABE]/50">{search ? 'No products match your search' : showOnlyAlerts ? 'No reorder alerts' : 'No forecast data available'}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[#1E3F5E]/60 bg-[#1A3755]/50">
-                  <th
-                    className="px-3 py-2 text-left text-[10px] font-medium text-[#8FAABE]/60 uppercase tracking-wide cursor-pointer select-none whitespace-nowrap"
-                    onClick={() => toggleSort('product_name')}
-                  >
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-[#8FAABE]/60 uppercase tracking-wide cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort('product_name')}>
                     Product <SortIcon column="product_name" />
                   </th>
-                  <th
-                    className="px-3 py-2 text-right text-[10px] font-medium text-[#8FAABE]/60 uppercase tracking-wide cursor-pointer select-none whitespace-nowrap"
-                    onClick={() => toggleSort('avg_daily_sales')}
-                  >
+                  <th className="px-3 py-2 text-right text-[10px] font-medium text-[#8FAABE]/60 uppercase tracking-wide cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort('avg_daily_sales')}>
                     Avg/Day <SortIcon column="avg_daily_sales" />
                   </th>
-                  <th
-                    className="px-3 py-2 text-right text-[10px] font-medium text-[#8FAABE]/60 uppercase tracking-wide cursor-pointer select-none whitespace-nowrap"
-                    onClick={() => toggleSort('forecast_units')}
-                  >
-                    Forecast ({FORECAST_DAYS}d) <SortIcon column="forecast_units" />
+                  <th className="px-3 py-2 text-right text-[10px] font-medium text-[#8FAABE]/60 uppercase tracking-wide cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort('forecast_units')}>
+                    Forecast ({forecastDays}d) <SortIcon column="forecast_units" />
                   </th>
-                  <th className="px-3 py-2 text-right text-[10px] font-medium text-[#8FAABE]/60 uppercase tracking-wide whitespace-nowrap">
-                    Cases
+                  <th className="px-3 py-2 text-right text-[10px] font-medium text-[#8FAABE]/60 uppercase tracking-wide whitespace-nowrap">Cases</th>
+                  <th className="px-3 py-2 text-right text-[10px] font-medium text-[#8FAABE]/60 uppercase tracking-wide cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort('forecast_revenue')}>
+                    Est. Rev. <SortIcon column="forecast_revenue" />
                   </th>
-                  <th
-                    className="px-3 py-2 text-right text-[10px] font-medium text-[#8FAABE]/60 uppercase tracking-wide cursor-pointer select-none whitespace-nowrap"
-                    onClick={() => toggleSort('actual_units')}
-                  >
-                    Last {FORECAST_DAYS}d <SortIcon column="actual_units" />
+                  <th className="px-3 py-2 text-right text-[10px] font-medium text-[#8FAABE]/60 uppercase tracking-wide cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort('actual_units')}>
+                    Actual ({forecastDays}d) <SortIcon column="actual_units" />
                   </th>
-                  <th className="px-3 py-2 text-center text-[10px] font-medium text-[#8FAABE]/60 uppercase tracking-wide whitespace-nowrap">
-                    Trend
+                  <th className="px-3 py-2 text-right text-[10px] font-medium text-[#8FAABE]/60 uppercase tracking-wide cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort('accuracy')}>
+                    Accuracy <SortIcon column="accuracy" />
                   </th>
+                  <th className="px-3 py-2 text-right text-[10px] font-medium text-[#8FAABE]/60 uppercase tracking-wide cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort('stock_covers_days')}>
+                    Stock <SortIcon column="stock_covers_days" />
+                  </th>
+                  <th className="px-3 py-2 text-center text-[10px] font-medium text-[#8FAABE]/60 uppercase tracking-wide whitespace-nowrap">Trend</th>
                 </tr>
               </thead>
               <tbody>
-                {(() => {
-                  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-                  const safePage = Math.min(page, totalPages);
-                  const pagedRows = rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-                  return pagedRows.map((row) => {
-                  const diff = row.actual_units - row.forecast_units;
-                  const pct =
-                    row.forecast_units > 0
-                      ? (diff / row.forecast_units) * 100
-                      : 0;
-                  const up = diff > 0;
-                  const down = diff < 0;
+                {pagedRows.map((row) => {
+                  const forecastRevenue = row.forecast_units * row.price;
+                  const up = row.variance > 0;
+                  const down = row.variance < 0;
+                  const variancePct = row.forecast_units > 0 ? (row.variance / row.forecast_units) * 100 : 0;
+                  const stockDanger = row.stock_quantity < row.forecast_units;
+                  const stockOut = row.stock_quantity === 0;
 
                   return (
-                    <tr
-                      key={row.product_id}
-                      className="border-b border-[#1E3F5E]/30 hover:bg-[#1A3755]/40 transition-colors"
-                    >
+                    <tr key={row.product_id} className="border-b border-[#1E3F5E]/30 hover:bg-[#1A3755]/40 transition-colors">
                       <td className="px-3 py-2">
-                        <p
-                          className="text-xs font-medium text-[#E8EDF2] truncate max-w-[220px]"
-                          title={row.product_name}
-                        >
-                          {row.product_name}
-                        </p>
+                        <p className="text-xs font-medium text-[#E8EDF2] truncate max-w-[200px]" title={row.product_name}>{row.product_name}</p>
+                        {row.sku && <p className="text-[9px] text-[#8FAABE]/40 font-mono">{row.sku}</p>}
                       </td>
-                      <td className="px-3 py-2 text-right text-xs text-[#E8EDF2]/80 tabular-nums">
-                        {row.avg_daily_sales.toFixed(1)}
-                      </td>
-                      <td className="px-3 py-2 text-right text-xs font-semibold text-[#E8EDF2] tabular-nums">
-                        {row.forecast_units}
-                      </td>
-                      <td className="px-3 py-2 text-right text-xs text-[#E8EDF2]/80 tabular-nums whitespace-nowrap">
-                        {formatCases(
-                          row.forecast_cases,
-                          row.forecast_remainder,
-                          row.carton_size
+                      <td className="px-3 py-2 text-right text-xs text-[#E8EDF2]/80 tabular-nums">{row.avg_daily_sales.toFixed(1)}</td>
+                      <td className="px-3 py-2 text-right text-xs font-semibold text-[#E8EDF2] tabular-nums">{row.forecast_units}</td>
+                      <td className="px-3 py-2 text-right text-xs text-[#E8EDF2]/80 tabular-nums whitespace-nowrap">{formatCases(row.forecast_cases, row.forecast_remainder, row.carton_size)}</td>
+                      <td className="px-3 py-2 text-right text-xs text-[#E8EDF2]/80 tabular-nums">{formatCurrency(forecastRevenue)}</td>
+                      <td className="px-3 py-2 text-right text-xs text-[#E8EDF2]/80 tabular-nums">{row.actual_units}</td>
+                      <td className="px-3 py-2 text-right">
+                        {row.forecast_units === 0 && row.actual_units === 0 ? (
+                          <span className="text-[10px] text-[#8FAABE]/30">-</span>
+                        ) : (
+                          <span className={cn('text-[10px] font-semibold tabular-nums', row.accuracy >= 80 ? 'text-[#98C379]' : row.accuracy >= 60 ? 'text-[#E5C07B]' : 'text-[#E06C75]')}>
+                            {row.accuracy.toFixed(0)}%
+                          </span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-right text-xs text-[#E8EDF2]/80 tabular-nums">
-                        {row.actual_units}
+                      <td className="px-3 py-2 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {stockOut ? (
+                            <span className="text-[10px] font-semibold text-[#E06C75]">Out</span>
+                          ) : stockDanger ? (
+                            <span className="text-[10px] font-semibold text-[#E5C07B] tabular-nums" title={`${row.stock_quantity} in stock, need ${row.forecast_units}`}>{row.stock_quantity}</span>
+                          ) : (
+                            <span className="text-[10px] text-[#E8EDF2]/70 tabular-nums">{row.stock_quantity}</span>
+                          )}
+                          {stockDanger && <AlertTriangle size={10} className="text-[#E5C07B] flex-shrink-0" />}
+                        </div>
                       </td>
                       <td className="px-3 py-2 text-center">
                         {row.forecast_units === 0 && row.actual_units === 0 ? (
                           <Minus size={12} className="text-[#8FAABE]/30 inline-block" />
                         ) : up ? (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-[#98C379]">
-                            <TrendingUp size={11} />
-                            +{pct.toFixed(0)}%
-                          </span>
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-[#98C379]"><TrendingUp size={11} /> +{variancePct.toFixed(0)}%</span>
                         ) : down ? (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-[#E06C75]">
-                            <TrendingDown size={11} />
-                            {pct.toFixed(0)}%
-                          </span>
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-[#E06C75]"><TrendingDown size={11} /> {variancePct.toFixed(0)}%</span>
                         ) : (
                           <Minus size={12} className="text-[#8FAABE]/50 inline-block" />
                         )}
                       </td>
                     </tr>
                   );
-                });
-                })()}
+                })}
               </tbody>
             </table>
           </div>
         )}
 
-        {/* Footer */}
-        {!loading && rows.length > 0 && (() => {
-          const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-          const safePage = Math.min(page, totalPages);
-          const startIdx = (safePage - 1) * PAGE_SIZE;
-          return (
-            <div className="px-3 py-2 border-t border-[#1E3F5E]/60 bg-[#1A3755]/50 flex justify-between items-center">
-              <p className="text-[10px] text-[#8FAABE]/50">
-                Showing {startIdx + 1}–{Math.min(startIdx + PAGE_SIZE, rows.length)} of {rows.length} products
-              </p>
-              <div className="flex items-center gap-2">
-                {totalPages > 1 && (
-                  <>
-                    <button
-                      disabled={safePage === 1}
-                      onClick={() => setPage((p) => p - 1)}
-                      className="text-[10px] px-2 py-0.5 rounded border border-[#1E3F5E]/60 text-[#8FAABE]/70 hover:bg-[#162F4D] disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      Prev
-                    </button>
-                    <span className="text-[10px] text-[#8FAABE]/70">
-                      Page {safePage} of {totalPages}
-                    </span>
-                    <button
-                      disabled={safePage === totalPages}
-                      onClick={() => setPage((p) => p + 1)}
-                      className="text-[10px] px-2 py-0.5 rounded border border-[#1E3F5E]/60 text-[#8FAABE]/70 hover:bg-[#162F4D] disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      Next
-                    </button>
-                  </>
-                )}
-                <p className="text-[10px] text-[#8FAABE]/40 ml-2">
-                  {HISTORY_WEEKS}-week weighted avg
-                </p>
+        {/* Pagination */}
+        {!loading && rows.length > 0 && (
+          <div className="px-3 py-2 border-t border-[#1E3F5E]/60 bg-[#1A3755]/50 flex justify-between items-center">
+            <p className="text-[10px] text-[#8FAABE]/50 tabular-nums">
+              Showing {startIdx + 1}–{Math.min(startIdx + PAGE_SIZE, rows.length)} of {rows.length}
+            </p>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button disabled={safePage === 1} onClick={() => setPage((p) => p - 1)} className="text-[10px] px-2 py-0.5 rounded border border-[#1E3F5E]/60 text-[#8FAABE]/70 hover:bg-[#162F4D] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Prev</button>
+                <span className="text-[10px] text-[#8FAABE]/50 tabular-nums px-1">Page {safePage} of {totalPages}</span>
+                <button disabled={safePage === totalPages} onClick={() => setPage((p) => p + 1)} className="text-[10px] px-2 py-0.5 rounded border border-[#1E3F5E]/60 text-[#8FAABE]/70 hover:bg-[#162F4D] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Next</button>
               </div>
-            </div>
-          );
-        })()}
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

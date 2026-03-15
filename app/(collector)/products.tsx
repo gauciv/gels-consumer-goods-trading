@@ -14,6 +14,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useProducts } from '@/hooks/useProducts';
 import { useCart } from '@/lib/cart';
+import { useNotifications } from '@/hooks/useNotifications';
 import { formatCurrency, formatShortDate } from '@/lib/formatters';
 import type { Product } from '@/types';
 
@@ -33,6 +34,7 @@ export default function ProductsScreen() {
     refresh,
   } = useProducts();
   const { addItem, updateQuantity, items, getItemCount, storeOrders, activeStoreId, setActiveStore } = useCart();
+  const { unreadCount } = useNotifications();
   const { storeId } = useLocalSearchParams<{ storeId?: string }>();
   const cartCount = getItemCount();
   const { width } = useWindowDimensions();
@@ -110,8 +112,18 @@ export default function ProductsScreen() {
           </View>
           <View className="flex-row items-center gap-3">
             {/* Notifications button */}
-            <TouchableOpacity onPress={() => router.push('/(collector)/notifications')}>
+            <TouchableOpacity
+              className="relative"
+              onPress={() => router.push('/(collector)/notifications')}
+            >
               <Ionicons name="notifications-outline" size={22} color="#374151" />
+              {unreadCount > 0 && (
+                <View className="absolute -top-2 -right-2 bg-red-500 rounded-full min-w-[16px] h-[16px] items-center justify-center">
+                  <Text className="text-white text-[9px] font-bold">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
             {/* Order History button */}
             <TouchableOpacity

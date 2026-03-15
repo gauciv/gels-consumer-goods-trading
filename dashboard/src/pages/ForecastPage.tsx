@@ -13,6 +13,8 @@ import {
   AlertTriangle,
   BarChart2,
   Target,
+  HelpCircle,
+  X,
 } from 'lucide-react';
 
 interface ForecastRow {
@@ -66,6 +68,7 @@ export function ForecastPage() {
   const [historyWeeks, setHistoryWeeks] = useState(12);
   const [forecastDays, setForecastDays] = useState(14);
   const [showOnlyAlerts, setShowOnlyAlerts] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   async function loadData(weeks: number, days: number) {
     setLoading(true);
@@ -217,6 +220,13 @@ export function ForecastPage() {
           <p className="text-[10px] text-[#8FAABE]/50">Weighted moving average predictions for inventory planning</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowHelp(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-medium bg-[#162F4D] border border-[#1E3F5E]/60 text-[#8FAABE]/60 rounded-lg hover:text-[#E8EDF2] hover:bg-[#1A3755] transition-colors"
+          >
+            <HelpCircle size={13} />
+            How it works
+          </button>
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] text-[#8FAABE]/50">History:</span>
             <div className="flex bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg overflow-hidden">
@@ -490,6 +500,71 @@ export function ForecastPage() {
           </div>
         )}
       </div>
+
+      {/* How it works modal */}
+      {showHelp && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={() => setShowHelp(false)}>
+          <div className="bg-[#162F4D] rounded-lg max-w-lg w-full shadow-xl border border-[#1E3F5E]/60 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1E3F5E]/60 sticky top-0 bg-[#162F4D] z-10">
+              <h3 className="text-sm font-bold text-[#E8EDF2]">How Demand Forecast Works</h3>
+              <button onClick={() => setShowHelp(false)} className="p-1 text-[#8FAABE]/50 hover:text-[#E8EDF2] rounded transition-colors"><X size={16} /></button>
+            </div>
+            <div className="px-5 py-4 space-y-4 text-xs text-[#E8EDF2]/80 leading-relaxed">
+
+              <div>
+                <h4 className="text-[11px] font-semibold text-[#5B9BD5] uppercase tracking-wide mb-1">Forecast Model</h4>
+                <p>Uses a <strong className="text-[#E8EDF2]">weighted moving average</strong> based on historical duty-day sales. Recent weeks are given higher weight so the model adapts to trends. Configure the history window (4/8/12 weeks) and forecast horizon (7/14/30 days) at the top.</p>
+              </div>
+
+              <div>
+                <h4 className="text-[11px] font-semibold text-[#5B9BD5] uppercase tracking-wide mb-1">KPI Cards</h4>
+                <ul className="space-y-1 ml-3 list-disc marker:text-[#5B9BD5]/40">
+                  <li><strong className="text-[#E8EDF2]">Products</strong> — How many active products have sale history vs total active products.</li>
+                  <li><strong className="text-[#E8EDF2]">Forecast Demand</strong> — Total units predicted to sell in the forecast period, with case equivalent.</li>
+                  <li><strong className="text-[#E8EDF2]">Forecast Revenue</strong> — Estimated revenue if all forecasted units are sold at current prices.</li>
+                  <li><strong className="text-[#E8EDF2]">Model Accuracy</strong> — How close recent actual sales matched the forecast. Green (&ge;80%), yellow (&ge;60%), red (&lt;60%).</li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-[11px] font-semibold text-[#5B9BD5] uppercase tracking-wide mb-1">Top Demand</h4>
+                <p>A quick visual ranking of which products are expected to sell the most units. Use this to prioritize restocking.</p>
+              </div>
+
+              <div>
+                <h4 className="text-[11px] font-semibold text-[#5B9BD5] uppercase tracking-wide mb-1">Reorder Alerts</h4>
+                <p>Products where <strong className="text-[#E8EDF2]">current stock is less than forecasted demand</strong>. Color-coded by severity:</p>
+                <ul className="space-y-0.5 ml-3 list-disc marker:text-[#5B9BD5]/40 mt-1">
+                  <li><span className="text-[#E06C75] font-medium">Red</span> — Out of stock (0 units)</li>
+                  <li><span className="text-[#D19A66] font-medium">Orange</span> — Critical (stock &lt; 30% of forecast)</li>
+                  <li><span className="text-[#E5C07B] font-medium">Yellow</span> — Low (stock below forecast but above 30%)</li>
+                </ul>
+                <p className="mt-1">The <strong className="text-[#E8EDF2]">"need +N"</strong> value shows how many additional units you should order.</p>
+              </div>
+
+              <div>
+                <h4 className="text-[11px] font-semibold text-[#5B9BD5] uppercase tracking-wide mb-1">Forecast Table</h4>
+                <ul className="space-y-1 ml-3 list-disc marker:text-[#5B9BD5]/40">
+                  <li><strong className="text-[#E8EDF2]">Avg/Day</strong> — Weighted average daily unit sales based on historical data.</li>
+                  <li><strong className="text-[#E8EDF2]">Forecast</strong> — Predicted total units for the forecast period (Avg/Day x days).</li>
+                  <li><strong className="text-[#E8EDF2]">Cases</strong> — Forecast in carton units (e.g. "3c 2p" = 3 cases + 2 pieces).</li>
+                  <li><strong className="text-[#E8EDF2]">Est. Rev.</strong> — Forecast units multiplied by current unit price.</li>
+                  <li><strong className="text-[#E8EDF2]">Actual</strong> — Real units sold in the most recent period of equal length.</li>
+                  <li><strong className="text-[#E8EDF2]">Accuracy</strong> — How close actual matched forecast. 100% = perfect prediction.</li>
+                  <li><strong className="text-[#E8EDF2]">Stock</strong> — Current inventory level. Warning icon appears if stock can't cover forecast.</li>
+                  <li><strong className="text-[#E8EDF2]">Trend</strong> — Whether actual sales exceeded (+%) or fell short (-%) of forecast.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-[11px] font-semibold text-[#5B9BD5] uppercase tracking-wide mb-1">Reorder Only Filter</h4>
+                <p>Toggle this to show only products that need restocking — hides everything where stock already covers the forecast period.</p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

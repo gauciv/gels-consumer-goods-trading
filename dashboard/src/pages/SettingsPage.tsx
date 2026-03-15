@@ -256,14 +256,8 @@ export function SettingsPage() {
   return (
     <div className="p-3 bg-[#0D1F33] min-h-full flex justify-center">
       <div className="w-full max-w-5xl">
-      {/* Header */}
-      <div className="mb-4">
-        <h1 className="text-sm font-bold text-[#E8EDF2]">Settings</h1>
-        <p className="text-[10px] text-[#8FAABE]/50">Manage your dashboard preferences</p>
-      </div>
-
       {/* Tab Navigation */}
-      <div className="flex gap-1 mb-4 bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg p-1 max-w-sm">
+      <div className="flex gap-1 mb-4 bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg p-1 max-w-sm mx-auto">
         {tabs.map((t) => (
           <button
             key={t.key}

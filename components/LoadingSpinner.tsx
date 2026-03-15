@@ -7,8 +7,8 @@ interface LoadingSpinnerProps {
 
 export function LoadingSpinner({ message }: LoadingSpinnerProps) {
   return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <ActivityIndicator size="large" color="#3b82f6" />
+    <View className="flex-1 items-center justify-center bg-surface">
+      <ActivityIndicator size="large" color="#1060C0" />
       {message && <Text className="mt-4 text-gray-500">{message}</Text>}
     </View>
   );

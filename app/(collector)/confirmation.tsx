@@ -34,7 +34,7 @@ export default function ConfirmationScreen() {
   if (!orderNumber) return null;
 
   return (
-    <View className="flex-1 bg-white items-center justify-center px-4">
+    <View className="flex-1 bg-surface items-center justify-center px-4">
       <View style={isTablet ? { maxWidth: 400, width: '100%' } : { width: '100%', paddingHorizontal: 16 }}>
         <View className="items-center mb-6">
           <Animated.View

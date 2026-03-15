@@ -11,6 +11,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 
+const RESEARCHERS = [
+  'Emily Grace C. Espiritu',
+  'Marc Roland C. Gesta',
+  'Ashley G. Ybañez',
+];
+
+const DEVELOPERS = [
+  'Jonna Bohol',
+  'Vincent August',
+];
+
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -30,49 +41,79 @@ export default function SettingsScreen() {
           className="px-4 py-6"
         >
           {/* Profile Section */}
-          <View className="bg-white rounded-xl p-5 mb-6 shadow-sm">
-            <View className="items-center mb-4">
+          <View className="bg-surface rounded-xl p-5 mb-4 shadow-sm border border-gray-200">
+            <View className="items-center mb-2">
               <View className="w-16 h-16 rounded-full bg-blue-100 items-center justify-center mb-3">
-                <Ionicons name="person" size={32} color="#3b82f6" />
+                <Ionicons name="person" size={32} color="#1060C0" />
               </View>
-              <Text className="text-xl font-bold text-gray-800">
-                {user?.full_name}
-              </Text>
+              <Text className="text-xl font-bold text-gray-800">{user?.full_name}</Text>
               <Text className="text-sm text-gray-500 mt-1">{user?.email}</Text>
               <View className="bg-blue-100 px-3 py-1 rounded-full mt-2">
-                <Text className="text-blue-700 text-xs font-medium capitalize">
-                  {user?.role}
-                </Text>
+                <Text className="text-blue-600 text-xs font-semibold capitalize">{user?.role}</Text>
               </View>
             </View>
           </View>
 
           {/* App Info */}
-          <View className="bg-white rounded-xl p-5 mb-6 shadow-sm">
-            <Text className="text-sm font-semibold text-gray-500 uppercase mb-3">
-              App Info
-            </Text>
-            <View className="flex-row justify-between py-3 border-b border-gray-100">
+          <View className="bg-surface rounded-xl p-5 mb-4 shadow-sm border border-gray-200">
+            <Text className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">App Info</Text>
+            <View className="flex-row justify-between py-2.5 border-b border-gray-200">
               <Text className="text-gray-600">Version</Text>
-              <Text className="text-gray-800 font-medium">1.0.0</Text>
+              <Text className="text-gray-800 font-semibold">1.0.0</Text>
             </View>
-            <View className="flex-row justify-between py-3">
+            <View className="flex-row justify-between py-2.5">
               <Text className="text-gray-600">Account Status</Text>
-              <Text className="text-green-600 font-medium">Active</Text>
+              <Text className="text-green-600 font-semibold">Active</Text>
             </View>
           </View>
 
-          {/* Danger Zone */}
-          <View className="bg-white rounded-xl p-5 shadow-sm">
-            <Text className="text-sm font-semibold text-gray-500 uppercase mb-3">
-              Account
-            </Text>
+          {/* Researchers */}
+          <View className="bg-surface rounded-xl p-5 mb-4 shadow-sm border border-gray-200">
+            <Text className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Researchers</Text>
+            {RESEARCHERS.map((name, i) => (
+              <View
+                key={name}
+                className={`flex-row items-center py-2.5 ${i < RESEARCHERS.length - 1 ? 'border-b border-gray-200' : ''}`}
+              >
+                <View
+                  className="w-8 h-8 rounded-full items-center justify-center mr-3"
+                  style={{ backgroundColor: '#1060C0' }}
+                >
+                  <Text className="text-white text-xs font-bold">{name.charAt(0)}</Text>
+                </View>
+                <Text className="text-gray-700 font-medium flex-1">{name}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Developers */}
+          <View className="bg-surface rounded-xl p-5 mb-4 shadow-sm border border-gray-200">
+            <Text className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Developers</Text>
+            {DEVELOPERS.map((name, i) => (
+              <View
+                key={name}
+                className={`flex-row items-center py-2.5 ${i < DEVELOPERS.length - 1 ? 'border-b border-gray-200' : ''}`}
+              >
+                <View
+                  className="w-8 h-8 rounded-full items-center justify-center mr-3"
+                  style={{ backgroundColor: '#0A2040' }}
+                >
+                  <Text className="text-white text-xs font-bold">{name.charAt(0)}</Text>
+                </View>
+                <Text className="text-gray-700 font-medium flex-1">{name}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Account */}
+          <View className="bg-surface rounded-xl p-5 shadow-sm border border-gray-200">
+            <Text className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Account</Text>
             <TouchableOpacity
-              className="flex-row items-center py-3"
+              className="flex-row items-center py-2.5"
               onPress={() => setShowLogoutModal(true)}
             >
               <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-              <Text className="text-red-500 font-medium ml-3">Log Out</Text>
+              <Text className="text-red-500 font-semibold ml-3">Log Out</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -86,14 +127,12 @@ export default function SettingsScreen() {
         onRequestClose={() => setShowLogoutModal(false)}
       >
         <View className="flex-1 bg-black/50 justify-center items-center px-6">
-          <View className="bg-white rounded-2xl p-6 w-full max-w-sm">
+          <View className="bg-surface rounded-2xl p-6 w-full max-w-sm border border-gray-200">
             <View className="items-center mb-4">
               <View className="w-14 h-14 rounded-full bg-red-100 items-center justify-center mb-3">
                 <Ionicons name="warning" size={28} color="#ef4444" />
               </View>
-              <Text className="text-lg font-bold text-gray-800 text-center">
-                Are you sure?
-              </Text>
+              <Text className="text-lg font-bold text-gray-800 text-center">Are you sure?</Text>
             </View>
             <Text className="text-gray-600 text-center mb-6 leading-5">
               You will need the Admin's QR code or activation code to log back

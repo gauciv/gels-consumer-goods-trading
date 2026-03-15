@@ -59,7 +59,7 @@ export default function OrdersScreen() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color="#1060C0" />
       </View>
     );
   }
@@ -103,7 +103,7 @@ export default function OrdersScreen() {
 
             return (
               <TouchableOpacity
-                className="bg-white rounded-xl p-4 mb-2.5 border border-gray-100"
+                className="bg-surface rounded-xl p-4 mb-2.5 border border-gray-100"
                 onPress={() => setSelectedOrder(item)}
                 activeOpacity={0.7}
               >
@@ -149,7 +149,7 @@ export default function OrdersScreen() {
           onPress={() => setSelectedOrder(null)}
         >
           <TouchableOpacity activeOpacity={1} onPress={() => {}}>
-            <View className="bg-white rounded-t-2xl px-6 pt-6 pb-10 max-h-[85%]">
+            <View className="bg-surface rounded-t-2xl px-6 pt-6 pb-10 max-h-[85%]">
               {selectedOrder && (
                 <ScrollView showsVerticalScrollIndicator={false}>
                   {/* Header */}

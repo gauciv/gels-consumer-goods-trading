@@ -20,7 +20,7 @@ export default function CollectorLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: '#3b82f6' },
+        headerStyle: { backgroundColor: '#0A2040' },
         headerTintColor: '#fff',
         headerTitleStyle: { fontWeight: 'bold' },
       }}

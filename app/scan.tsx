@@ -71,17 +71,17 @@ export default function ScanScreen() {
 
   if (hasPermission === null) {
     return (
-      <View className="flex-1 bg-white items-center justify-center">
-        <ActivityIndicator size="large" color="#3b82f6" />
+      <View style={{ backgroundColor: '#0A2040' }} className="flex-1 items-center justify-center">
+        <ActivityIndicator size="large" color="#1060C0" />
       </View>
     );
   }
 
   if (!hasPermission) {
     return (
-      <View className="flex-1 bg-white items-center justify-center p-8">
-        <Ionicons name="camera-outline" size={48} color="#9ca3af" />
-        <Text className="text-gray-600 text-center mt-4 mb-4">
+      <View style={{ backgroundColor: '#0A2040' }} className="flex-1 items-center justify-center p-8">
+        <Ionicons name="camera-outline" size={48} color="rgba(255,255,255,0.4)" />
+        <Text style={{ color: 'rgba(255,255,255,0.7)' }} className="text-center mt-4 mb-4">
           Camera permission is required to scan QR codes
         </Text>
         <TouchableOpacity
@@ -91,23 +91,23 @@ export default function ScanScreen() {
           <Text className="text-white font-semibold">Grant Permission</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-blue-500 font-medium">Go Back</Text>
+          <Text style={{ color: '#74A7E6' }} className="font-medium">Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-white">
+    <View style={{ flex: 1, backgroundColor: '#0A2040' }}>
       {/* Header */}
       <View className="flex-row items-center px-4 pt-14 pb-4">
         <TouchableOpacity
           onPress={() => router.back()}
           className="p-2 -ml-2"
         >
-          <Ionicons name="arrow-back" size={24} color="#374151" />
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text className="text-lg font-semibold text-gray-800 ml-2">
+        <Text className="text-lg font-semibold text-white ml-2">
           Scan QR Code
         </Text>
       </View>
@@ -122,7 +122,7 @@ export default function ScanScreen() {
       {/* Loading overlay */}
       {loading ? (
         <View className="bg-blue-50 border border-blue-200 rounded-lg p-3 mx-4 mb-4 flex-row items-center justify-center">
-          <ActivityIndicator size="small" color="#3b82f6" />
+          <ActivityIndicator size="small" color="#1060C0" />
           <Text className="text-blue-600 text-sm ml-2">Activating...</Text>
         </View>
       ) : null}

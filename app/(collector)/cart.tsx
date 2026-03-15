@@ -164,7 +164,7 @@ export default function CartScreen() {
           return (
             <View
               key={order.storeId}
-              className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4"
+              className="bg-surface rounded-xl border border-gray-100 overflow-hidden mb-4"
             >
               {/* Card header */}
               <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
@@ -387,7 +387,7 @@ export default function CartScreen() {
               return (
                 <View
                   key={key}
-                  className={`bg-white rounded-xl border mb-2 overflow-hidden ${
+                  className={`bg-surface rounded-xl border mb-2 overflow-hidden ${
                     isSelected ? 'border-red-200' : 'border-green-100'
                   }`}
                 >
@@ -409,7 +409,7 @@ export default function CartScreen() {
                   >
                     {historyEditMode ? (
                       <View className={`w-5 h-5 rounded border-2 mr-3 items-center justify-center ${
-                        isSelected ? 'bg-red-500 border-red-500' : 'border-gray-300 bg-white'
+                        isSelected ? 'bg-red-500 border-red-500' : 'border-gray-300 bg-surface'
                       }`}>
                         {isSelected && <Ionicons name="checkmark" size={12} color="#fff" />}
                       </View>
@@ -544,7 +544,7 @@ function StorePickerModal({
         onPress={handleClose}
       >
         <TouchableOpacity activeOpacity={1} onPress={() => {}}>
-          <View className="bg-white rounded-t-2xl px-5 pt-5 pb-10">
+          <View className="bg-surface rounded-t-2xl px-5 pt-5 pb-10">
             {/* Header */}
             <View className="flex-row items-center justify-between mb-5">
               <Text className="text-base font-bold text-gray-800">Add Store</Text>
@@ -590,7 +590,7 @@ function StorePickerModal({
             {/* Search existing */}
             {loading ? (
               <View className="py-6 items-center">
-                <ActivityIndicator size="small" color="#3b82f6" />
+                <ActivityIndicator size="small" color="#1060C0" />
                 <Text className="text-gray-400 text-sm mt-2">Loading stores...</Text>
               </View>
             ) : (

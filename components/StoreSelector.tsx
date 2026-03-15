@@ -27,7 +27,7 @@ export function StoreSelector({ stores, selectedId, onSelect }: StoreSelectorPro
               <TouchableOpacity
                 key={store.id}
                 className={`flex-1 p-4 border rounded-lg ${
-                  selectedId === store.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
+                  selectedId === store.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-surface'
                 }`}
                 onPress={() => onSelect(store)}
               >
@@ -56,7 +56,7 @@ export function StoreSelector({ stores, selectedId, onSelect }: StoreSelectorPro
         <TouchableOpacity
           key={store.id}
           className={`p-4 border rounded-lg mb-2 ${
-            selectedId === store.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
+            selectedId === store.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-surface'
           }`}
           onPress={() => onSelect(store)}
         >

@@ -1,21 +1,21 @@
 {
   "expo": {
-    "name": "pos-app",
-    "slug": "pos-app",
+    "name": "GELS",
+    "slug": "gels",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "posapp",
+    "scheme": "gels",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0A2040"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0A2040"
       },
       "package": "com.gauciv.posapp"
     },
@@ -28,7 +28,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow POS App to use your camera to scan QR codes for activation."
+          "cameraPermission": "Allow GELS to use your camera to scan QR codes for activation."
         }
       ]
     ],

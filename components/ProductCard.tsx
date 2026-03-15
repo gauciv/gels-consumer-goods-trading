@@ -13,7 +13,7 @@ export function ProductCard({ product, onAdd, cartQuantity = 0 }: ProductCardPro
   const isOutOfStock = product.stock_quantity <= 0;
 
   return (
-    <View className="bg-white rounded-lg p-4 mb-3 border border-gray-100 shadow-sm">
+    <View className="bg-surface rounded-lg p-4 mb-3 border border-gray-100 shadow-sm">
       <View className="flex-row justify-between items-start">
         <View className="flex-1 mr-3">
           <Text className="text-base font-semibold text-gray-800">{product.name}</Text>

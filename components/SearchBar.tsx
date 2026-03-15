@@ -11,7 +11,7 @@ export function SearchBar({ value, onChangeText, placeholder = 'Search products.
   return (
     <View className="mb-4">
       <TextInput
-        className="bg-white border border-gray-200 rounded-lg px-4 py-3 text-base"
+        className="bg-surface border border-gray-200 rounded-lg px-4 py-3 text-base"
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

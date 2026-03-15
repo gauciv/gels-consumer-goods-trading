@@ -10,6 +10,8 @@ import {
   useWindowDimensions,
   Platform,
 } from 'react-native';
+import MaskedView from '@react-native-masked-view/masked-view';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useProducts } from '@/hooks/useProducts';
@@ -100,29 +102,35 @@ export default function ProductsScreen() {
     <View className="flex-1 bg-gray-50">
       {/* Custom Header */}
       <View
-        className="bg-white border-b border-gray-200 px-4 pb-3"
-        style={{ paddingTop: Platform.OS === 'ios' ? 54 : 40 }}
+        style={{ backgroundColor: '#0A2040', paddingTop: Platform.OS === 'ios' ? 54 : 40 }}
+        className="px-4 pb-3"
       >
         <View className="flex-row items-center justify-between">
           <View className="flex-1 mr-3">
-            <Text className="text-base font-bold text-gray-800" numberOfLines={1}>
-              POS App
-            </Text>
+            <MaskedView
+              maskElement={
+                <Text style={{ fontSize: 26, fontWeight: '900', backgroundColor: 'transparent' }} numberOfLines={1}>
+                  GELS
+                </Text>
+              }
+            >
+              <LinearGradient colors={['#FFFFFF', '#74A7E6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                <Text style={{ fontSize: 26, fontWeight: '900', opacity: 0 }} numberOfLines={1}>
+                  GELS
+                </Text>
+              </LinearGradient>
+            </MaskedView>
             {activeStore ? (
-              <Text className="text-xs text-blue-600 mt-0.5" numberOfLines={1}>
+              <Text style={{ color: 'rgba(255,255,255,0.65)' }} className="text-xs mt-0.5" numberOfLines={1}>
                 For: {activeStore.storeName}
               </Text>
             ) : (
-              <Text className="text-xs text-gray-400 mt-0.5">{today}</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.45)' }} className="text-xs mt-0.5">{today}</Text>
             )}
           </View>
           <View className="flex-row items-center gap-3">
-            {/* Notifications button */}
-            <TouchableOpacity
-              className="relative"
-              onPress={() => router.push('/(collector)/notifications')}
-            >
-              <Ionicons name="notifications-outline" size={22} color="#374151" />
+            <TouchableOpacity className="relative" onPress={() => router.push('/(collector)/notifications')}>
+              <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
               {unreadCount > 0 && (
                 <View className="absolute -top-2 -right-2 bg-red-500 rounded-full min-w-[16px] h-[16px] items-center justify-center">
                   <Text className="text-white text-[9px] font-bold">
@@ -131,48 +139,40 @@ export default function ProductsScreen() {
                 </View>
               )}
             </TouchableOpacity>
-            {/* Order History button */}
-            <TouchableOpacity
-              onPress={() => router.push('/(collector)/orders')}
-            >
-              <Ionicons name="receipt-outline" size={22} color="#374151" />
+            <TouchableOpacity onPress={() => router.push('/(collector)/orders')}>
+              <Ionicons name="receipt-outline" size={22} color="#FFFFFF" />
             </TouchableOpacity>
-            {/* Cart button */}
-            <TouchableOpacity
-              className="relative"
-              onPress={() => router.push('/(collector)/cart')}
-            >
-              <Ionicons name="bag-outline" size={24} color="#374151" />
+            <TouchableOpacity className="relative" onPress={() => router.push('/(collector)/cart')}>
+              <Ionicons name="bag-outline" size={24} color="#FFFFFF" />
               {cartCount > 0 && (
-                <View className="absolute -top-2 -right-2 bg-blue-500 rounded-full min-w-[18px] h-[18px] items-center justify-center">
+                <View className="absolute -top-2 -right-2 bg-blue-400 rounded-full min-w-[18px] h-[18px] items-center justify-center">
                   <Text className="text-white text-[10px] font-bold">{cartCount}</Text>
                 </View>
               )}
             </TouchableOpacity>
-            {/* Profile button */}
             <TouchableOpacity onPress={() => router.push('/(collector)/settings')}>
-              <Ionicons name="person-circle-outline" size={24} color="#9ca3af" />
+              <Ionicons name="person-circle-outline" size={24} color="rgba(255,255,255,0.7)" />
             </TouchableOpacity>
           </View>
         </View>
       </View>
 
       {/* Sticky Search Bar */}
-      <View className="bg-white px-4 pt-3 pb-2 border-b border-gray-100">
-        <View className="flex-row items-center bg-gray-100 rounded-lg px-3 py-2.5">
-          <Ionicons name="search-outline" size={18} color="#9ca3af" />
+      <View style={{ backgroundColor: '#0D2B52' }} className="px-4 pt-3 pb-3">
+        <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }} className="flex-row items-center px-3 py-2.5">
+          <Ionicons name="search-outline" size={18} color="rgba(255,255,255,0.55)" />
           <TextInput
-            className="flex-1 ml-2 text-base text-gray-800"
+            style={{ flex: 1, marginLeft: 8, fontSize: 15, color: '#FFFFFF' }}
             value={search}
             onChangeText={setSearch}
             placeholder="Search products..."
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor="rgba(255,255,255,0.35)"
             autoCapitalize="none"
             autoCorrect={false}
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')}>
-              <Ionicons name="close-circle" size={18} color="#9ca3af" />
+              <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.55)" />
             </TouchableOpacity>
           )}
         </View>
@@ -185,7 +185,7 @@ export default function ProductsScreen() {
           onPress={() => router.push('/(collector)/cart')}
           activeOpacity={0.8}
         >
-          <Ionicons name="storefront-outline" size={20} color="#3b82f6" />
+          <Ionicons name="storefront-outline" size={20} color="#1060C0" />
           <View className="flex-1">
             <Text className="text-sm font-bold text-blue-700">No store selected</Text>
             <Text className="text-xs text-blue-500 mt-0.5">Tap to go to cart and select a store to start ordering</Text>
@@ -224,7 +224,7 @@ export default function ProductsScreen() {
           }
           ListFooterComponent={() =>
             totalPages > 1 ? (
-              <View className="flex-row items-center justify-between bg-white mx-3 mb-4 px-4 py-3 rounded-xl border border-gray-100">
+              <View className="flex-row items-center justify-between bg-surface mx-3 mb-4 px-4 py-3 rounded-xl border border-gray-100">
                 <TouchableOpacity
                   onPress={prevPage}
                   disabled={page === 1}
@@ -256,7 +256,7 @@ export default function ProductsScreen() {
             return (
               <View style={numColumns > 1 ? { flex: 1 } : undefined}>
                 <TouchableOpacity
-                  className={`bg-white rounded-xl mb-2.5 border overflow-hidden ${
+                  className={`bg-surface rounded-xl mb-2.5 border overflow-hidden ${
                     isOutOfStock ? 'border-gray-100 opacity-50' : inCart > 0 ? 'border-blue-200' : 'border-gray-100'
                   }`}
                   onPress={() => openQuantityModal(item)}
@@ -283,7 +283,7 @@ export default function ProductsScreen() {
                             </View>
                           ) : (
                             <View className={`rounded-full w-7 h-7 items-center justify-center ${isOutOfStock ? 'bg-gray-100' : 'bg-blue-50'}`}>
-                              <Ionicons name="add" size={16} color={isOutOfStock ? '#9ca3af' : '#3b82f6'} />
+                              <Ionicons name="add" size={16} color={isOutOfStock ? '#9ca3af' : '#1060C0'} />
                             </View>
                           )}
                         </View>
@@ -325,7 +325,7 @@ export default function ProductsScreen() {
           onPress={closeModal}
         >
           <TouchableOpacity activeOpacity={1} onPress={() => {}}>
-            <View className="bg-white rounded-t-3xl px-6 pt-3 pb-10">
+            <View className="bg-surface rounded-t-3xl px-6 pt-3 pb-10">
               {/* Drag handle */}
               <View className="items-center mb-4">
                 <View className="w-10 h-1 bg-gray-200 rounded-full" />
@@ -363,7 +363,7 @@ export default function ProductsScreen() {
                   </Text>
                   <View className="flex-row items-center justify-between bg-gray-50 rounded-2xl px-4 py-3 mb-5">
                     <TouchableOpacity
-                      className="w-12 h-12 rounded-xl bg-white border border-gray-200 items-center justify-center"
+                      className="w-12 h-12 rounded-xl bg-surface border border-gray-200 items-center justify-center"
                       onPress={() => setQuantity((q) => Math.max(1, q - 1))}
                     >
                       <Ionicons name="remove" size={22} color="#374151" />

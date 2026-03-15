@@ -1,5 +1,8 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CartItem } from '@/types';
+
+const CART_STORAGE_KEY = '@gels/cart_state';
 
 type StoreOrder = {
   storeId: string;
@@ -48,6 +51,50 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
   const [submittedStores, setSubmittedStores] = useState<Set<string>>(new Set());
   const [submittedHistory, setSubmittedHistory] = useState<SubmittedRecord[]>([]);
+
+  // Tracks whether the initial AsyncStorage load has completed.
+  // We must not save back to storage until after the first load finishes,
+  // otherwise the empty initial state would overwrite the persisted data.
+  const loaded = useRef(false);
+
+  // ── Load persisted state on mount ──────────────────────────────────────────
+  useEffect(() => {
+    AsyncStorage.getItem(CART_STORAGE_KEY).then((raw) => {
+      if (raw) {
+        try {
+          const data = JSON.parse(raw);
+          if (Array.isArray(data.storeOrders))      setStoreOrders(data.storeOrders);
+          if (data.activeStoreId !== undefined)      setActiveStoreId(data.activeStoreId);
+          if (Array.isArray(data.submittedStores))   setSubmittedStores(new Set<string>(data.submittedStores));
+          if (Array.isArray(data.submittedHistory)) {
+            setSubmittedHistory(
+              data.submittedHistory.map((r: any) => ({
+                ...r,
+                submittedAt: new Date(r.submittedAt),
+              }))
+            );
+          }
+        } catch (_) {
+          // Corrupted storage — start fresh
+        }
+      }
+      loaded.current = true;
+    });
+  }, []);
+
+  // ── Persist on every state change (after initial load) ────────────────────
+  useEffect(() => {
+    if (!loaded.current) return;
+    const snapshot = {
+      storeOrders,
+      activeStoreId,
+      submittedStores: [...submittedStores],
+      submittedHistory,
+    };
+    AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(snapshot)).catch(() => {});
+  }, [storeOrders, activeStoreId, submittedStores, submittedHistory]);
+
+  // ── Actions ───────────────────────────────────────────────────────────────
 
   const setActiveStore = useCallback((id: string | null) => {
     setActiveStoreId(id);
@@ -226,6 +273,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setActiveStoreId(null);
     setSubmittedStores(new Set());
     setSubmittedHistory([]);
+    AsyncStorage.removeItem(CART_STORAGE_KEY).catch(() => {});
   }, []);
 
   const items = useMemo(

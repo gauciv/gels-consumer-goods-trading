@@ -11,7 +11,7 @@ interface OrderSummaryCardProps {
 
 export function OrderSummaryCard({ items, storeName, subtotal }: OrderSummaryCardProps) {
   return (
-    <View className="bg-white rounded-lg p-4 border border-gray-100">
+    <View className="bg-surface rounded-lg p-4 border border-gray-100">
       <Text className="text-sm text-gray-500 mb-3">Store: {storeName}</Text>
       {items.map((item) => (
         <View key={item.product_id} className="flex-row justify-between py-2 border-b border-gray-50">

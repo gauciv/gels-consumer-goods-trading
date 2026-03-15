@@ -12,7 +12,7 @@ interface CartItemProps {
 
 export function CartItem({ item, onUpdateQuantity, onRemove }: CartItemProps) {
   return (
-    <View className="bg-white rounded-lg p-4 mb-3 border border-gray-100">
+    <View className="bg-surface rounded-lg p-4 mb-3 border border-gray-100">
       <View className="flex-row justify-between items-start">
         <View className="flex-1 mr-3">
           <Text className="text-base font-semibold text-gray-800">{item.product_name}</Text>

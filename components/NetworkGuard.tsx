@@ -7,7 +7,7 @@ export function NetworkGuard({ children }: { children: React.ReactNode }) {
 
   if (!isConnected) {
     return (
-      <View className="flex-1 items-center justify-center bg-white px-6">
+      <View className="flex-1 items-center justify-center bg-surface px-6">
         <Text className="text-6xl mb-4">!</Text>
         <Text className="text-xl font-bold text-gray-800 mb-2">No Internet Connection</Text>
         <Text className="text-gray-500 text-center mb-6">

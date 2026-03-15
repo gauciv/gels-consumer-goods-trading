@@ -52,7 +52,7 @@ type IconConfig = { name: React.ComponentProps<typeof Ionicons>['name']; bg: str
 function iconFor(type: NotificationType): IconConfig {
   switch (type) {
     case 'order_status_changed':
-      return { name: 'receipt-outline',     bg: 'bg-blue-50',   color: '#3b82f6' };
+      return { name: 'receipt-outline',     bg: 'bg-blue-50',   color: '#1060C0' };
     case 'low_stock':
       return { name: 'warning-outline',     bg: 'bg-orange-50', color: '#f97316' };
     case 'out_of_stock':
@@ -74,7 +74,7 @@ function NotificationRow({
   const icon = iconFor(item.type);
   return (
     <TouchableOpacity
-      className={`flex-row items-start px-4 py-3 ${!item.is_read ? 'bg-blue-50/40' : 'bg-white'}`}
+      className={`flex-row items-start px-4 py-3 ${!item.is_read ? 'bg-blue-50/40' : 'bg-surface'}`}
       onPress={() => { if (!item.is_read) onPress(item.id); }}
       activeOpacity={0.7}
     >
@@ -111,7 +111,7 @@ export default function NotificationsScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-gray-50 items-center justify-center">
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color="#1060C0" />
       </View>
     );
   }
@@ -135,7 +135,7 @@ export default function NotificationsScreen() {
   return (
     <View className="flex-1 bg-gray-50">
       {unreadCount > 0 && (
-        <View className="flex-row items-center justify-between px-4 py-2.5 bg-white border-b border-gray-100">
+        <View className="flex-row items-center justify-between px-4 py-2.5 bg-surface border-b border-gray-100">
           <Text className="text-xs text-gray-500">
             {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
           </Text>
@@ -153,7 +153,7 @@ export default function NotificationsScreen() {
                 {label}
               </Text>
             </View>
-            <View className="bg-white border-y border-gray-100 overflow-hidden">
+            <View className="bg-surface border-y border-gray-100 overflow-hidden">
               {items.map((item, index) => (
                 <View key={item.id}>
                   <NotificationRow item={item} onPress={markAsRead} />

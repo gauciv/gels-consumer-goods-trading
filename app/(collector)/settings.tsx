@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
+  Image,
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
@@ -177,20 +178,19 @@ export default function SettingsScreen() {
                             <View
                               key={member.id}
                               className="bg-[#162F4D] rounded-xl p-4 items-center border border-[#1E3F5E]/60"
-                              style={{ width: (width - 44) / 2 }}
+                              style={{ width: (width - 56) / 3 }}
                             >
                               {member.avatar_url ? (
                                 <Image
                                   source={{ uri: member.avatar_url }}
-                                  className="w-16 h-16 rounded-full mb-3"
-                                  style={{ borderWidth: 2, borderColor: '#1E3F5E99' }}
+                                  style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: '#1E3F5E99', marginBottom: 10 }}
                                 />
                               ) : (
-                                <View className="w-16 h-16 rounded-full bg-[#0D1F33] items-center justify-center mb-3 border-2 border-[#1E3F5E]/60">
-                                  <Ionicons name="person" size={28} color="#8FAABE33" />
+                                <View style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: '#1E3F5E99', marginBottom: 10 }} className="bg-[#0D1F33] items-center justify-center">
+                                  <Ionicons name="person" size={32} color="#8FAABE33" />
                                 </View>
                               )}
-                              <Text className="text-sm font-semibold text-[#E8EDF2] text-center" numberOfLines={1}>
+                              <Text className="text-xs font-semibold text-[#E8EDF2] text-center" numberOfLines={2}>
                                 {member.name}
                               </Text>
                               <Text className="text-[10px] text-[#8FAABE]/50 mt-0.5">
@@ -225,15 +225,14 @@ export default function SettingsScreen() {
                               {member.avatar_url ? (
                                 <Image
                                   source={{ uri: member.avatar_url }}
-                                  className="w-16 h-16 rounded-full mb-3"
-                                  style={{ borderWidth: 2, borderColor: '#1E3F5E99' }}
+                                  style={{ width: 88, height: 88, borderRadius: 44, borderWidth: 2, borderColor: '#1E3F5E99', marginBottom: 10 }}
                                 />
                               ) : (
-                                <View className="w-16 h-16 rounded-full bg-[#0D1F33] items-center justify-center mb-3 border-2 border-[#1E3F5E]/60">
-                                  <Ionicons name="person" size={28} color="#8FAABE33" />
+                                <View style={{ width: 88, height: 88, borderRadius: 44, borderWidth: 2, borderColor: '#1E3F5E99', marginBottom: 10 }} className="bg-[#0D1F33] items-center justify-center">
+                                  <Ionicons name="person" size={36} color="#8FAABE33" />
                                 </View>
                               )}
-                              <Text className="text-sm font-semibold text-[#E8EDF2] text-center" numberOfLines={1}>
+                              <Text className="text-sm font-semibold text-[#E8EDF2] text-center" numberOfLines={2}>
                                 {member.name}
                               </Text>
                               <Text className="text-[10px] text-[#8FAABE]/50 mt-0.5">

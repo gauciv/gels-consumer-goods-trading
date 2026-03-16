@@ -595,11 +595,11 @@ export function SettingsPage() {
                   <Loader2 size={18} className="animate-spin text-[#5B9BD5]" />
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-4">
+                <div className="grid grid-cols-3 gap-6">
                   {teamMembers.map((member) => {
                     const isEditing = editingId === member.id;
                     return (
-                      <div key={member.id} className="bg-[#0D1F33] border border-[#1E3F5E]/30 rounded-lg p-4 flex flex-col items-center text-center relative group w-[calc(50%-8px)] sm:w-[calc(33.333%-11px)] md:w-[calc(25%-12px)]">
+                      <div key={member.id} className="bg-[#0D1F33] border border-[#1E3F5E]/30 rounded-xl p-5 flex flex-col items-center text-center relative group">
                         {/* Edit toggle */}
                         {!isEditing ? (
                           <button
@@ -634,16 +634,16 @@ export function SettingsPage() {
                         </button>
 
                         {/* Avatar */}
-                        <div className="relative flex-shrink-0 mb-3">
+                        <div className="relative flex-shrink-0 mb-4">
                           {member.avatar_url ? (
                             <img
                               src={member.avatar_url}
                               alt={member.name}
-                              className="w-16 h-16 rounded-full object-cover border-2 border-[#1E3F5E]/60"
+                              className="w-24 h-24 rounded-full object-cover border-2 border-[#1E3F5E]/60"
                             />
                           ) : (
-                            <div className="w-16 h-16 rounded-full bg-[#162F4D] border-2 border-[#1E3F5E]/60 flex items-center justify-center">
-                              <UserCircle size={28} className="text-[#8FAABE]/30" />
+                            <div className="w-24 h-24 rounded-full bg-[#162F4D] border-2 border-[#1E3F5E]/60 flex items-center justify-center">
+                              <UserCircle size={44} className="text-[#8FAABE]/30" />
                             </div>
                           )}
                           {isEditing && (
@@ -653,9 +653,9 @@ export function SettingsPage() {
                               className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center cursor-pointer transition-opacity"
                             >
                               {uploadingId === member.id ? (
-                                <Loader2 size={14} className="animate-spin text-white" />
+                                <Loader2 size={20} className="animate-spin text-white" />
                               ) : (
-                                <Camera size={14} className="text-white" />
+                                <Camera size={20} className="text-white" />
                               )}
                             </button>
                           )}
@@ -691,30 +691,30 @@ export function SettingsPage() {
                             </button>
                           </div>
                         ) : (
-                          <p className="text-xs font-semibold text-[#E8EDF2] truncate w-full">{member.name}</p>
+                          <p className="text-sm font-semibold text-[#E8EDF2] truncate w-full">{member.name}</p>
                         )}
-                        <p className="text-[10px] text-[#8FAABE]/50 truncate w-full">{member.role}</p>
+                        <p className="text-xs text-[#8FAABE]/50 truncate w-full mt-0.5">{member.role}</p>
                       </div>
                     );
                   })}
 
                   {/* Add Member Card */}
-                  <div className="bg-[#0D1F33] border-2 border-dashed border-[#1E3F5E]/40 rounded-lg p-4 flex flex-col items-center text-center w-[calc(50%-8px)] sm:w-[calc(33.333%-11px)] md:w-[calc(25%-12px)]">
+                  <div className="bg-[#0D1F33] border-2 border-dashed border-[#1E3F5E]/40 rounded-xl p-5 flex flex-col items-center text-center">
                     {/* Photo preview or upload trigger */}
-                    <div className="relative flex-shrink-0 mb-3">
+                    <div className="relative flex-shrink-0 mb-4">
                       {newMemberPreview ? (
                         <img
                           src={newMemberPreview}
                           alt="New member"
-                          className="w-16 h-16 rounded-full object-cover border-2 border-[#1E3F5E]/60 cursor-pointer"
+                          className="w-24 h-24 rounded-full object-cover border-2 border-[#1E3F5E]/60 cursor-pointer"
                           onClick={() => newMemberFileRef.current?.click()}
                         />
                       ) : (
                         <button
                           onClick={() => newMemberFileRef.current?.click()}
-                          className="w-16 h-16 rounded-full bg-[#162F4D] border-2 border-dashed border-[#1E3F5E]/60 flex items-center justify-center cursor-pointer hover:border-[#5B9BD5]/50 transition-colors"
+                          className="w-24 h-24 rounded-full bg-[#162F4D] border-2 border-dashed border-[#1E3F5E]/60 flex items-center justify-center cursor-pointer hover:border-[#5B9BD5]/50 transition-colors"
                         >
-                          <Camera size={18} className="text-[#8FAABE]/30" />
+                          <Camera size={24} className="text-[#8FAABE]/30" />
                         </button>
                       )}
                       <input

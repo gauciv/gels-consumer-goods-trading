@@ -23,6 +23,9 @@ export async function getOrders(filters?: OrderFilters): Promise<PaginatedRespon
 
   if (filters?.status) query = query.eq('status', filters.status);
   if (filters?.store_id) query = query.eq('store_id', filters.store_id);
+  if (filters?.date) {
+    query = query.gte('created_at', `${filters.date}T00:00:00`).lt('created_at', `${filters.date}T23:59:59.999`);
+  }
 
   const sortBy = filters?.sort_by || 'newest';
   if (sortBy === 'oldest') {

@@ -192,7 +192,7 @@ export function DashboardPage() {
       setCollectorsLoading(false);
     }
     async function fetchLowStock() {
-      const { data } = await supabase.from('products').select('*').eq('is_active', true).lte('stock_quantity', 10).order('stock_quantity', { ascending: true }).limit(5);
+      const { data } = await supabase.from('products').select('*').eq('is_active', true).lte('stock_quantity', 30).order('stock_quantity', { ascending: true }).limit(5);
       setLowStockProducts((data as Product[]) || []);
       setLowStockLoading(false);
     }
@@ -594,9 +594,9 @@ export function DashboardPage() {
             ) : (
               <div className="space-y-1">
                 {lowStockProducts.map((p) => {
-                  const level = p.stock_quantity === 0 ? 'out' : p.stock_quantity < 5 ? 'critical' : 'low';
-                  const dotColor = level === 'out' ? 'bg-[#E06C75]' : level === 'critical' ? 'bg-[#D19A66]' : 'bg-[#E5C07B]';
-                  const textColor = level === 'out' ? 'text-[#E06C75]' : level === 'critical' ? 'text-[#D19A66]' : 'text-[#E5C07B]';
+                  const level = p.stock_quantity === 0 ? 'out' : 'low';
+                  const dotColor = level === 'out' ? 'bg-[#E06C75]' : 'bg-[#E5C07B]';
+                  const textColor = level === 'out' ? 'text-[#E06C75]' : 'text-[#E5C07B]';
                   const label = level === 'out' ? 'Out' : String(p.stock_quantity);
                   return (
                     <div key={p.id} className="flex items-center gap-1.5 py-0.5 cursor-pointer hover:bg-[#1A3755]/50 -mx-1.5 px-1.5 rounded transition-colors" onClick={() => navigate(`/products/${p.id}/edit`)}>

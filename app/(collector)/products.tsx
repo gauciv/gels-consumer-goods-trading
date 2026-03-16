@@ -206,7 +206,7 @@ export default function ProductsScreen() {
           }
           renderItem={({ item }) => {
             const isOutOfStock = item.stock_quantity <= 0;
-            const isLowStock = item.stock_quantity > 0 && item.stock_quantity < 10;
+            const isLowStock = item.stock_quantity > 0 && item.stock_quantity <= 30;
             const inCart = getCartQuantity(item.id);
 
             return (
@@ -220,7 +220,7 @@ export default function ProductsScreen() {
                   activeOpacity={0.7}
                 >
                   <View className="flex-row">
-                    <View className={`w-1 ${isOutOfStock ? 'bg-[#1E3F5E]/30' : inCart > 0 ? 'bg-[#5B9BD5]' : 'bg-[#1E3F5E]/30'}`} />
+                    <View className={`w-1 ${inCart > 0 ? 'bg-[#5B9BD5]' : isOutOfStock ? 'bg-[#E06C75]' : isLowStock ? 'bg-[#E5C07B]' : 'bg-[#98C379]'}`} />
                     <View className="flex-1 px-3 py-3">
                       <View className="flex-row items-start justify-between">
                         <View className="flex-1 mr-2">
@@ -324,10 +324,10 @@ export default function ProductsScreen() {
                     {formatCurrency(selectedProduct.price)}
                   </Text>
                   <View className={`rounded-full px-3 py-1 ${
-                    selectedProduct.stock_quantity < 10 ? 'bg-[#E5C07B]/10' : 'bg-[#98C379]/10'
+                    selectedProduct.stock_quantity <= 30 ? 'bg-[#E5C07B]/10' : 'bg-[#98C379]/10'
                   }`}>
                     <Text className={`text-xs font-semibold ${
-                      selectedProduct.stock_quantity < 10 ? 'text-[#E5C07B]' : 'text-[#98C379]'
+                      selectedProduct.stock_quantity <= 30 ? 'text-[#E5C07B]' : 'text-[#98C379]'
                     }`}>
                       {selectedProduct.stock_quantity} available
                     </Text>

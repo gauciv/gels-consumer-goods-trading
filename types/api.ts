@@ -52,6 +52,7 @@ export interface OrderFilters {
   status?: string;
   collector_id?: string;
   store_id?: string;
+  date?: string; // YYYY-MM-DD
   sort_by?: 'newest' | 'oldest' | 'highest' | 'lowest';
   page?: number;
   page_size?: number;

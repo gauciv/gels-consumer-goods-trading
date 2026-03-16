@@ -48,8 +48,8 @@ export function useProducts() {
 
       // Stock filter
       if (stockFilter === 'out') query = query.lte('stock_quantity', 0);
-      else if (stockFilter === 'low') query = query.gt('stock_quantity', 0).lte('stock_quantity', 10);
-      else if (stockFilter === 'in_stock') query = query.gt('stock_quantity', 10);
+      else if (stockFilter === 'low') query = query.gt('stock_quantity', 0).lte('stock_quantity', 30);
+      else if (stockFilter === 'in_stock') query = query.gt('stock_quantity', 30);
 
       query = query.order(sortField, { ascending: sortDir === 'asc' }).range(from, to);
 

@@ -7,6 +7,12 @@
     "icon": "./assets/icon.png",
     "scheme": "posapp",
     "userInterfaceStyle": "light",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6f387942-2662-4786-85fa-ea741b0c5e60"
+    },
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",

@@ -4,6 +4,7 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
+  Pressable,
   RefreshControl,
   Modal,
   ScrollView,
@@ -51,6 +52,37 @@ const sortOptions: { value: OrderFilters['sort_by']; label: string }[] = [
   { value: 'lowest', label: 'Lowest' },
 ];
 
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+function toDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatDisplayDate(dateStr: string | null): string {
+  if (!dateStr) return 'All Dates';
+  const d = new Date(dateStr + 'T00:00:00');
+  const today = new Date();
+  const todayStr = toDateStr(today);
+  if (dateStr === todayStr) return 'Today';
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (dateStr === toDateStr(yesterday)) return 'Yesterday';
+  return `${MONTHS[d.getMonth()].slice(0, 3)} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+function getCalendarDays(year: number, month: number): (number | null)[] {
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  return cells;
+}
+
 const PAGE_SIZE = 20;
 
 export default function OrdersScreen() {
@@ -69,22 +101,28 @@ export default function OrdersScreen() {
   const [total, setTotal] = useState(0);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calYear, setCalYear] = useState(new Date().getFullYear());
+  const [calMonth, setCalMonth] = useState(new Date().getMonth());
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const fetchOrders = useCallback(async (silent = false, overrides?: Partial<{ p: number; status: string; sort: OrderFilters['sort_by'] }>) => {
+  const fetchOrders = useCallback(async (silent = false, overrides?: Partial<{ p: number; status: string; sort: OrderFilters['sort_by']; date: string | null }>) => {
     if (!silent) setLoading(true);
     setError(null);
     try {
       const currentPage = overrides?.p ?? page;
       const currentStatus = overrides?.status ?? statusFilter;
       const currentSort = overrides?.sort ?? sortBy;
+      const currentDate = overrides !== undefined && 'date' in overrides ? overrides.date : selectedDate;
       const filters: OrderFilters = {
         page: currentPage,
         page_size: PAGE_SIZE,
         sort_by: currentSort,
       };
       if (currentStatus !== 'all') filters.status = currentStatus;
+      if (currentDate) filters.date = currentDate;
       const result = await getOrders(filters);
       setOrders(result.data);
       setTotal(result.total);
@@ -93,7 +131,7 @@ export default function OrdersScreen() {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [page, statusFilter, sortBy]);
+  }, [page, statusFilter, sortBy, selectedDate]);
 
   useEffect(() => {
     fetchOrders();
@@ -304,6 +342,84 @@ export default function OrdersScreen() {
         </View>
       </View>
 
+      {/* Invisible backdrop to close dropdowns when tapping outside */}
+      {(showStatusDropdown || showSortMenu) && (
+        <Pressable
+          className="absolute inset-0 z-40"
+          onPress={() => { setShowStatusDropdown(false); setShowSortMenu(false); }}
+        />
+      )}
+
+      {/* Date filter bar */}
+      <View className="flex-row items-center justify-between px-3 py-2 bg-[#162F4D] border-b border-[#1E3F5E]/30">
+        <TouchableOpacity
+          onPress={() => {
+            if (!selectedDate) return;
+            const d = new Date(selectedDate + 'T00:00:00');
+            d.setDate(d.getDate() - 1);
+            const newDate = toDateStr(d);
+            setSelectedDate(newDate);
+            setPage(1);
+            fetchOrders(false, { p: 1, date: newDate });
+          }}
+          disabled={!selectedDate}
+          className={!selectedDate ? 'opacity-30' : 'opacity-100'}
+        >
+          <Ionicons name="chevron-back" size={20} color="#8FAABE" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          className="flex-row items-center gap-2 px-3 py-1.5 bg-[#1A3755] rounded-lg"
+          onPress={() => {
+            setShowStatusDropdown(false);
+            setShowSortMenu(false);
+            if (selectedDate) {
+              const d = new Date(selectedDate + 'T00:00:00');
+              setCalYear(d.getFullYear());
+              setCalMonth(d.getMonth());
+            } else {
+              setCalYear(new Date().getFullYear());
+              setCalMonth(new Date().getMonth());
+            }
+            setShowCalendar(true);
+          }}
+        >
+          <Ionicons name="calendar-outline" size={14} color="#5B9BD5" />
+          <Text className="text-xs font-medium text-[#E8EDF2]">{formatDisplayDate(selectedDate)}</Text>
+        </TouchableOpacity>
+
+        <View className="flex-row items-center gap-2">
+          {selectedDate && (
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedDate(null);
+                setPage(1);
+                fetchOrders(false, { p: 1, date: null });
+              }}
+            >
+              <Ionicons name="close-circle" size={18} color="#8FAABE" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            onPress={() => {
+              if (!selectedDate) return;
+              const d = new Date(selectedDate + 'T00:00:00');
+              d.setDate(d.getDate() + 1);
+              const todayStr = toDateStr(new Date());
+              const newDate = toDateStr(d);
+              if (newDate > todayStr) return;
+              setSelectedDate(newDate);
+              setPage(1);
+              fetchOrders(false, { p: 1, date: newDate });
+            }}
+            disabled={!selectedDate || selectedDate >= toDateStr(new Date())}
+            className={!selectedDate || selectedDate >= toDateStr(new Date()) ? 'opacity-30' : 'opacity-100'}
+          >
+            <Ionicons name="chevron-forward" size={20} color="#8FAABE" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* Order list */}
       {displayOrders.length === 0 && !loading ? (
         <View className="flex-1 items-center justify-center px-4">
@@ -415,6 +531,123 @@ export default function OrdersScreen() {
           <ActivityIndicator size="large" color="#5B9BD5" />
         </View>
       )}
+
+      {/* Calendar Modal */}
+      <Modal
+        visible={showCalendar}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCalendar(false)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}
+          onPress={() => setShowCalendar(false)}
+        >
+          <Pressable onPress={(e) => e.stopPropagation()}>
+            <View style={{ backgroundColor: '#162F4D', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(30,63,94,0.6)', width: 320, overflow: 'hidden' }}>
+              {/* Calendar header */}
+              <View className="flex-row items-center justify-between px-4 py-3 border-b border-[#1E3F5E]/30">
+                <TouchableOpacity onPress={() => {
+                  if (calMonth === 0) { setCalMonth(11); setCalYear(calYear - 1); }
+                  else setCalMonth(calMonth - 1);
+                }}>
+                  <Ionicons name="chevron-back" size={20} color="#5B9BD5" />
+                </TouchableOpacity>
+                <Text className="text-sm font-bold text-[#E8EDF2]">{MONTHS[calMonth]} {calYear}</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    const now = new Date();
+                    if (calYear > now.getFullYear() || (calYear === now.getFullYear() && calMonth >= now.getMonth())) return;
+                    if (calMonth === 11) { setCalMonth(0); setCalYear(calYear + 1); }
+                    else setCalMonth(calMonth + 1);
+                  }}
+                  disabled={calYear > new Date().getFullYear() || (calYear === new Date().getFullYear() && calMonth >= new Date().getMonth())}
+                  className={calYear > new Date().getFullYear() || (calYear === new Date().getFullYear() && calMonth >= new Date().getMonth()) ? 'opacity-30' : 'opacity-100'}
+                >
+                  <Ionicons name="chevron-forward" size={20} color="#5B9BD5" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Day headers */}
+              <View className="flex-row px-2 pt-2">
+                {DAYS.map((d) => (
+                  <View key={d} className="flex-1 items-center py-1">
+                    <Text className="text-[10px] font-medium text-[#8FAABE]/50">{d}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Calendar grid */}
+              <View className="px-2 pb-3">
+                {(() => {
+                  const cells = getCalendarDays(calYear, calMonth);
+                  const rows: (number | null)[][] = [];
+                  for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
+                  const todayStr = toDateStr(new Date());
+                  return rows.map((row, ri) => (
+                    <View key={ri} className="flex-row">
+                      {row.map((day, ci) => {
+                        if (day === null) return <View key={ci} className="flex-1 h-10" />;
+                        const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                        const isToday = dateStr === todayStr;
+                        const isSelected = dateStr === selectedDate;
+                        const isFuture = dateStr > todayStr;
+                        return (
+                          <TouchableOpacity
+                            key={ci}
+                            className="flex-1 h-10 items-center justify-center"
+                            disabled={isFuture}
+                            onPress={() => {
+                              setSelectedDate(dateStr);
+                              setPage(1);
+                              setShowCalendar(false);
+                              fetchOrders(false, { p: 1, date: dateStr });
+                            }}
+                          >
+                            <View className={`w-8 h-8 rounded-full items-center justify-center ${isSelected ? 'bg-[#5B9BD5]' : isToday ? 'bg-[#5B9BD5]/20' : ''}`}>
+                              <Text className={`text-xs font-medium ${isFuture ? 'text-[#8FAABE]/20' : isSelected ? 'text-white' : isToday ? 'text-[#5B9BD5]' : 'text-[#E8EDF2]'}`}>
+                                {day}
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                      {row.length < 7 && [...Array(7 - row.length)].map((_, i) => <View key={`pad-${i}`} className="flex-1 h-10" />)}
+                    </View>
+                  ));
+                })()}
+              </View>
+
+              {/* Quick actions */}
+              <View className="flex-row border-t border-[#1E3F5E]/30">
+                <TouchableOpacity
+                  className="flex-1 py-3 items-center border-r border-[#1E3F5E]/30"
+                  onPress={() => {
+                    const todayStr = toDateStr(new Date());
+                    setSelectedDate(todayStr);
+                    setPage(1);
+                    setShowCalendar(false);
+                    fetchOrders(false, { p: 1, date: todayStr });
+                  }}
+                >
+                  <Text className="text-xs font-medium text-[#5B9BD5]">Today</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className="flex-1 py-3 items-center"
+                  onPress={() => {
+                    setSelectedDate(null);
+                    setPage(1);
+                    setShowCalendar(false);
+                    fetchOrders(false, { p: 1, date: null });
+                  }}
+                >
+                  <Text className="text-xs font-medium text-[#8FAABE]">All Dates</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Order Detail Modal - Full Viewport */}
       <Modal

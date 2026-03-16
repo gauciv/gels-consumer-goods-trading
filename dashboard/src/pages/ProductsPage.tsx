@@ -22,7 +22,7 @@ const statusTabs: { key: StatusTab; label: string }[] = [
 const stockOptions: { key: StockFilter; label: string }[] = [
   { key: 'all', label: 'All stock' },
   { key: 'in_stock', label: 'In stock' },
-  { key: 'low', label: 'Low (1-10)' },
+  { key: 'low', label: 'Low (1-30)' },
   { key: 'out', label: 'Out of stock' },
 ];
 
@@ -30,7 +30,7 @@ function StockBadge({ qty }: { qty: number }) {
   const cls =
     qty <= 0
       ? 'bg-[#E06C75]/10 text-[#E06C75]'
-      : qty <= 10
+      : qty <= 30
       ? 'bg-[#E5C07B]/10 text-[#E5C07B]'
       : 'bg-[#98C379]/10 text-[#98C379]';
   return (

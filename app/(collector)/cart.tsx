@@ -16,62 +16,47 @@ import { useCart } from '@/lib/cart';
 import { useOrderSubmit } from '@/hooks/useOrderSubmit';
 import { useStores } from '@/hooks/useStores';
 import { StoreSelector } from '@/components/StoreSelector';
-import { formatCurrency, formatShortDate } from '@/lib/formatters';
-import { createStore } from '@/services/stores.service';
+import { formatCurrency } from '@/lib/formatters';
+import { createStore, updateStore, deleteStore, getTopStores } from '@/services/stores.service';
 import type { Store } from '@/types';
 
 export default function CartScreen() {
   const {
-    storeOrders,
-    addStoreOrder,
-    removeStoreOrder,
-    isStoreAdded,
-    getStoreItems,
-    getStoreSubtotal,
-    removeItemFromStore,
-    updateQuantityInStore,
-    submittedStores,
-    submittedHistory,
+    draftItems,
+    removeDraftItem,
+    updateDraftQuantity,
+    getDraftSubtotal,
+    getDraftItemCount,
+    clearDraft,
     markStoreSubmitted,
-    activeStoreId,
-    setActiveStore,
   } = useCart();
 
   const { submitOrderForStore, isLoadingStore, getStoreError } = useOrderSubmit();
-  const { stores, loading: storesLoading } = useStores();
+  const { stores, loading: storesLoading, refetch: refetchStores } = useStores();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
 
   const [showStoreModal, setShowStoreModal] = useState(false);
   const [creatingStore, setCreatingStore] = useState(false);
-  const [expandedRecords, setExpandedRecords] = useState<Set<string>>(new Set());
-  const [historyEditMode, setHistoryEditMode] = useState(false);
-  const [selectedHistoryIds, setSelectedHistoryIds] = useState<Set<string>>(new Set());
+  const [selectedStore, setSelectedStore] = useState<{ id: string; name: string } | null>(null);
+  const [notes, setNotes] = useState('');
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [renamingStoreId, setRenamingStoreId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [emptySubmitShake, setEmptySubmitShake] = useState(false);
 
-  function toggleHistorySelect(storeId: string) {
-    setSelectedHistoryIds((prev) => {
-      const n = new Set(prev);
-      if (n.has(storeId)) n.delete(storeId); else n.add(storeId);
-      return n;
-    });
-  }
-
-  function exitHistoryEditMode() {
-    setHistoryEditMode(false);
-    setSelectedHistoryIds(new Set());
-  }
-
-  function deleteSelectedHistory() {
-    selectedHistoryIds.forEach((id) => removeStoreOrder(id));
-    exitHistoryEditMode();
-  }
+  const draftCount = getDraftItemCount();
+  const draftSubtotal = getDraftSubtotal();
+  const isSubmitting = selectedStore ? isLoadingStore(selectedStore.id) : false;
+  const submitError = selectedStore ? getStoreError(selectedStore.id) : null;
 
   async function handleAddCustomStore(name: string) {
     setCreatingStore(true);
     try {
       const store = await createStore(name);
-      addStoreOrder(store.id, store.name);
+      setSelectedStore({ id: store.id, name: store.name });
       setShowStoreModal(false);
+      refetchStores();
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Could not create store');
     } finally {
@@ -79,47 +64,84 @@ export default function CartScreen() {
     }
   }
 
-  async function handleSubmit(storeId: string, storeName: string) {
-    const items = getStoreItems(storeId);
-    const subtotal = getStoreSubtotal(storeId);
-    const itemCount = items.reduce((s, i) => s + i.quantity, 0);
-    const result = await submitOrderForStore(storeId, items);
+  async function handleSubmit() {
+    if (draftItems.length === 0) {
+      setEmptySubmitShake(true);
+      setTimeout(() => setEmptySubmitShake(false), 600);
+      Alert.alert('No Products', 'Please add at least one product to your order before submitting.');
+      return;
+    }
+    if (!selectedStore) {
+      Alert.alert('Store Required', 'Please select a store before submitting your order.');
+      return;
+    }
+
+    const result = await submitOrderForStore(selectedStore.id, draftItems, notes || undefined);
     if (result) {
-      markStoreSubmitted(storeId, storeName, itemCount, subtotal, items);
-      if (activeStoreId === storeId) setActiveStore(null);
+      markStoreSubmitted(selectedStore.id, selectedStore.name, draftCount, draftSubtotal, draftItems);
+      clearDraft();
+      setSelectedStore(null);
+      setNotes('');
+      router.replace('/(collector)/confirmation');
     }
   }
 
-  const availableStores = stores.filter((s) => s.is_active && !isStoreAdded(s.id));
+  async function handleRenameStore(storeId: string) {
+    const trimmed = renameValue.trim();
+    if (!trimmed) return;
+    try {
+      await updateStore(storeId, { name: trimmed });
+      if (selectedStore?.id === storeId) {
+        setSelectedStore({ id: storeId, name: trimmed });
+      }
+      refetchStores();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Could not rename store');
+    } finally {
+      setRenamingStoreId(null);
+      setRenameValue('');
+    }
+  }
 
-  // Empty state
-  if (storeOrders.length === 0) {
+  function handleDeleteStore(storeId: string, storeName: string) {
+    setMenuOpenId(null);
+    Alert.alert(
+      'Delete Store',
+      `Delete "${storeName}" permanently?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteStore(storeId);
+              if (selectedStore?.id === storeId) setSelectedStore(null);
+              refetchStores();
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Could not delete store. It may have associated orders.');
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  // Empty state - no items in cart
+  if (draftItems.length === 0) {
     return (
       <View className="flex-1 bg-gray-50 items-center justify-center px-4">
-        <Ionicons name="storefront-outline" size={48} color="#d1d5db" />
-        <Text className="text-gray-500 text-lg font-medium mt-4">No stores added yet</Text>
+        <Ionicons name="bag-outline" size={48} color="#d1d5db" />
+        <Text className="text-gray-500 text-lg font-medium mt-4">Your cart is empty</Text>
         <Text className="text-gray-400 text-sm mt-1 text-center">
-          Tap "Add Store" to begin adding orders
+          Browse products and add items to start your order
         </Text>
         <TouchableOpacity
           className="mt-6 bg-blue-500 rounded-lg px-8 py-3"
-          onPress={() => setShowStoreModal(true)}
+          onPress={() => router.back()}
         >
-          <Text className="text-white font-semibold">Add Store</Text>
+          <Text className="text-white font-semibold">Browse Products</Text>
         </TouchableOpacity>
-
-        <StorePickerModal
-          visible={showStoreModal}
-          onClose={() => setShowStoreModal(false)}
-          stores={availableStores}
-          loading={storesLoading}
-          creatingCustom={creatingStore}
-          onSelect={(store) => {
-            addStoreOrder(store.id, store.name);
-            setShowStoreModal(false);
-          }}
-          onAddCustom={handleAddCustomStore}
-        />
       </View>
     );
   }
@@ -129,362 +151,237 @@ export default function CartScreen() {
       <ScrollView
         contentContainerStyle={{
           padding: 12,
-          paddingBottom: 40,
+          paddingBottom: 140,
           ...(isTablet ? { maxWidth: 640, alignSelf: 'center' as const, width: '100%' } : {}),
         }}
       >
-        {/* Top row: store count + Add Store button */}
-        <View className="flex-row items-center justify-between mb-3">
-          <Text className="text-xs text-gray-400 font-medium uppercase tracking-wide">
-            {storeOrders.length} store{storeOrders.length !== 1 ? 's' : ''}
-          </Text>
-          <TouchableOpacity
-            className="w-8 h-8 bg-blue-500 rounded-full items-center justify-center"
-            onPress={() => setShowStoreModal(true)}
-          >
-            <Ionicons name="add" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Store cards */}
-        {storeOrders.map((order) => {
-          const isSubmitted = submittedStores.has(order.storeId);
-          const historyRecord = isSubmitted
-            ? submittedHistory.find((r) => r.storeId === order.storeId)
-            : null;
-          const items = isSubmitted
-            ? (historyRecord?.items ?? [])
-            : getStoreItems(order.storeId);
-          const subtotal = isSubmitted
-            ? (historyRecord?.subtotal ?? 0)
-            : getStoreSubtotal(order.storeId);
-          const isLoading = isLoadingStore(order.storeId);
-          const storeError = getStoreError(order.storeId);
-
-          return (
+        {/* Section: Order Items */}
+        <Text className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">
+          Order Items ({draftCount})
+        </Text>
+        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
+          {draftItems.map((item, index) => (
             <View
-              key={order.storeId}
-              className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4"
+              key={item.product_id}
+              className={`px-4 py-3 ${index < draftItems.length - 1 ? 'border-b border-gray-50' : ''}`}
             >
-              {/* Card header */}
-              <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
-                <View className="flex-row items-center flex-1 gap-2">
-                  <View className={`w-1 h-5 rounded-full ${isSubmitted ? 'bg-gray-300' : 'bg-blue-500'}`} />
-                  <Text className="text-sm font-bold text-gray-800" numberOfLines={1}>
-                    {order.storeName}
+              <View className="flex-row justify-between items-start">
+                <View className="flex-1 mr-3">
+                  <Text className="text-sm font-semibold text-gray-800">
+                    {item.product_name}
                   </Text>
-                  {isSubmitted ? (
-                    <View className="bg-green-100 rounded-full px-2 py-0.5 flex-row items-center gap-1">
-                      <Ionicons name="checkmark-circle" size={10} color="#16a34a" />
-                      <Text className="text-[10px] text-green-700 font-bold">Submitted</Text>
-                    </View>
-                  ) : items.length > 0 ? (
-                    <View className="bg-blue-100 rounded-full px-2 py-0.5">
-                      <Text className="text-[10px] text-blue-600 font-bold">
-                        {items.reduce((s, i) => s + i.quantity, 0)} items
-                      </Text>
-                    </View>
-                  ) : null}
+                  <Text className="text-xs text-gray-400 mt-0.5">
+                    {formatCurrency(item.unit_price)} × {item.quantity}
+                  </Text>
                 </View>
-                <TouchableOpacity
-                  onPress={() =>
-                    Alert.alert(
-                      'Remove Store',
-                      `Remove "${order.storeName}" and all its items?`,
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        {
-                          text: 'Remove',
-                          style: 'destructive',
-                          onPress: () => removeStoreOrder(order.storeId),
-                        },
-                      ]
-                    )
-                  }
-                >
-                  <Ionicons name="close-circle-outline" size={20} color="#9ca3af" />
-                </TouchableOpacity>
+                <Text className="text-sm font-bold text-gray-800">
+                  {formatCurrency(item.line_total)}
+                </Text>
               </View>
 
-              {/* Items */}
-              {items.length === 0 ? (
-                <View className="px-4 py-8 items-center">
-                  <Text className="text-gray-400 text-sm">No products added yet</Text>
-                </View>
-              ) : (
-                <>
-                  {items.map((item, index) => (
-                    <View
-                      key={item.product_id}
-                      className={`px-4 py-3 ${index < items.length - 1 ? 'border-b border-gray-50' : ''}`}
-                    >
-                      <View className="flex-row justify-between items-start">
-                        <View className="flex-1 mr-3">
-                          <Text className="text-sm font-semibold text-gray-800">
-                            {item.product_name}
-                          </Text>
-                          <Text className="text-xs text-gray-400 mt-0.5">
-                            {formatCurrency(item.unit_price)} × {item.quantity}
-                          </Text>
-                        </View>
-                        <Text className="text-sm font-bold text-gray-800">
-                          {formatCurrency(item.line_total)}
-                        </Text>
-                      </View>
+              {/* Quantity controls */}
+              <View className="flex-row items-center mt-2">
+                <TouchableOpacity
+                  className="w-7 h-7 rounded-full bg-gray-100 items-center justify-center"
+                  onPress={() => {
+                    if (item.quantity <= 1) {
+                      removeDraftItem(item.product_id);
+                    } else {
+                      updateDraftQuantity(item.product_id, item.quantity - 1);
+                    }
+                  }}
+                >
+                  <Ionicons
+                    name={item.quantity <= 1 ? 'trash-outline' : 'remove'}
+                    size={14}
+                    color={item.quantity <= 1 ? '#ef4444' : '#374151'}
+                  />
+                </TouchableOpacity>
+                <Text className="mx-3 text-sm font-medium text-gray-700 min-w-[20px] text-center">
+                  {item.quantity}
+                </Text>
+                <TouchableOpacity
+                  className="w-7 h-7 rounded-full bg-gray-100 items-center justify-center"
+                  onPress={() => updateDraftQuantity(item.product_id, item.quantity + 1)}
+                  disabled={item.quantity >= item.stock_quantity}
+                >
+                  <Ionicons
+                    name="add"
+                    size={14}
+                    color={item.quantity >= item.stock_quantity ? '#d1d5db' : '#374151'}
+                  />
+                </TouchableOpacity>
+                <View className="flex-1" />
+                <TouchableOpacity onPress={() => removeDraftItem(item.product_id)}>
+                  <Ionicons name="close-circle-outline" size={18} color="#9ca3af" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
 
-                      {/* Quantity controls */}
-                      {!isSubmitted && (
-                        <View className="flex-row items-center mt-2">
-                          <TouchableOpacity
-                            className="w-7 h-7 rounded-full bg-gray-100 items-center justify-center"
-                            onPress={() => {
-                              if (item.quantity <= 1) {
-                                removeItemFromStore(order.storeId, item.product_id);
-                              } else {
-                                updateQuantityInStore(
-                                  order.storeId,
-                                  item.product_id,
-                                  item.quantity - 1
-                                );
-                              }
-                            }}
-                          >
-                            <Ionicons
-                              name={item.quantity <= 1 ? 'trash-outline' : 'remove'}
-                              size={14}
-                              color={item.quantity <= 1 ? '#ef4444' : '#374151'}
-                            />
-                          </TouchableOpacity>
-                          <Text className="mx-3 text-sm font-medium text-gray-700 min-w-[20px] text-center">
-                            {item.quantity}
-                          </Text>
-                          <TouchableOpacity
-                            className="w-7 h-7 rounded-full bg-gray-100 items-center justify-center"
-                            onPress={() =>
-                              updateQuantityInStore(
-                                order.storeId,
-                                item.product_id,
-                                item.quantity + 1
-                              )
-                            }
-                            disabled={item.quantity >= item.stock_quantity}
-                          >
-                            <Ionicons
-                            name="add"
-                            size={14}
-                            color={
-                              item.quantity >= item.stock_quantity ? '#d1d5db' : '#374151'
-                            }
-                          />
+          {/* Subtotal */}
+          <View className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex-row justify-between items-center">
+            <Text className="text-sm font-bold text-gray-700">Subtotal</Text>
+            <Text className="text-base font-bold text-blue-600">
+              {formatCurrency(draftSubtotal)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Add more products */}
+        <TouchableOpacity
+          className="flex-row items-center justify-center gap-1.5 py-2.5 mb-4"
+          onPress={() => router.back()}
+        >
+          <Ionicons name="add-circle-outline" size={16} color="#3b82f6" />
+          <Text className="text-sm font-medium text-blue-500">Add more products</Text>
+        </TouchableOpacity>
+
+        {/* Section: Select Store */}
+        <Text className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">
+          Store <Text className="text-red-400">*</Text>
+        </Text>
+        {selectedStore ? (
+          <View className="bg-white rounded-xl border border-blue-200 overflow-hidden mb-4">
+            <View className="flex-row items-center justify-between px-4 py-3">
+              <View className="flex-row items-center gap-2.5 flex-1">
+                <View className="w-8 h-8 bg-blue-50 rounded-full items-center justify-center">
+                  <Ionicons name="storefront" size={16} color="#3b82f6" />
+                </View>
+                {renamingStoreId === selectedStore.id ? (
+                  <View className="flex-row items-center flex-1 gap-1.5">
+                    <TextInput
+                      className="flex-1 bg-white border border-blue-300 rounded-lg px-2.5 py-1.5 text-sm text-gray-800"
+                      value={renameValue}
+                      onChangeText={setRenameValue}
+                      autoFocus
+                      returnKeyType="done"
+                      onSubmitEditing={() => handleRenameStore(selectedStore.id)}
+                      onBlur={() => { setRenamingStoreId(null); setRenameValue(''); }}
+                    />
+                    <TouchableOpacity onPress={() => handleRenameStore(selectedStore.id)} className="p-1">
+                      <Ionicons name="checkmark-circle" size={22} color="#3b82f6" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <Text className="text-sm font-bold text-gray-800 flex-1" numberOfLines={1}>
+                    {selectedStore.name}
+                  </Text>
+                )}
+              </View>
+              {renamingStoreId !== selectedStore.id && (
+                <View className="flex-row items-center gap-1">
+                  <View className="relative">
+                    <TouchableOpacity
+                      onPress={() => setMenuOpenId(menuOpenId === selectedStore.id ? null : selectedStore.id)}
+                      className="p-1.5"
+                    >
+                      <Ionicons name="ellipsis-vertical" size={18} color="#9ca3af" />
+                    </TouchableOpacity>
+                    {menuOpenId === selectedStore.id && (
+                      <View className="absolute right-0 top-9 bg-white rounded-xl border border-gray-200 shadow-lg z-50 w-40 overflow-hidden" style={{ elevation: 8 }}>
+                        <TouchableOpacity
+                          className="flex-row items-center gap-2.5 px-4 py-3 border-b border-gray-100"
+                          onPress={() => {
+                            setMenuOpenId(null);
+                            setRenameValue(selectedStore.name);
+                            setRenamingStoreId(selectedStore.id);
+                          }}
+                        >
+                          <Ionicons name="pencil-outline" size={16} color="#374151" />
+                          <Text className="text-sm text-gray-700">Rename</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          className="flex-row items-center gap-2.5 px-4 py-3"
+                          onPress={() => handleDeleteStore(selectedStore.id, selectedStore.name)}
+                        >
+                          <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                          <Text className="text-sm text-red-500">Delete Store</Text>
                         </TouchableOpacity>
                       </View>
-                      )}
-                    </View>
-                  ))}
-
-                  {/* Subtotal */}
-                  <View className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex-row justify-between items-center">
-                    <Text className="text-sm font-bold text-gray-700">Subtotal</Text>
-                    <Text className="text-base font-bold text-blue-600">
-                      {formatCurrency(subtotal)}
-                    </Text>
+                    )}
                   </View>
-                </>
-              )}
-
-              {/* Error */}
-              {storeError ? (
-                <View className="mx-4 mb-3 bg-red-50 border border-red-200 rounded-lg p-3">
-                  <Text className="text-red-600 text-xs text-center">{storeError}</Text>
-                </View>
-              ) : null}
-
-              {/* Action row */}
-              {!isSubmitted && (
-                <View className="flex-row gap-2 px-4 pb-4">
                   <TouchableOpacity
-                    className="flex-1 rounded-lg py-2.5 items-center bg-gray-100"
-                    onPress={() =>
-                      router.push({
-                        pathname: '/(collector)/products',
-                        params: { storeId: order.storeId },
-                      })
-                    }
-                    disabled={isLoading}
+                    onPress={() => setSelectedStore(null)}
+                    className="p-1.5"
                   >
-                    <Text className="text-gray-700 text-sm font-medium">Browse Products</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    className={`flex-1 rounded-lg py-2.5 items-center ${
-                      items.length === 0 || isLoading ? 'bg-green-300' : 'bg-green-500'
-                    }`}
-                    onPress={() => handleSubmit(order.storeId, order.storeName)}
-                    disabled={items.length === 0 || isLoading}
-                  >
-                    {isLoading ? (
-                      <View className="flex-row items-center gap-1.5">
-                        <ActivityIndicator size="small" color="#fff" />
-                        <Text className="text-white text-sm font-bold">Submitting...</Text>
-                      </View>
-                    ) : (
-                      <Text className="text-white text-sm font-bold">Submit Order</Text>
-                    )}
+                    <Ionicons name="close-circle" size={20} color="#9ca3af" />
                   </TouchableOpacity>
                 </View>
               )}
             </View>
-          );
-        })}
+          </View>
+        ) : (
+          <TouchableOpacity
+            className="bg-white rounded-xl border border-dashed border-gray-300 px-4 py-4 flex-row items-center justify-center gap-2 mb-4"
+            onPress={() => setShowStoreModal(true)}
+          >
+            <Ionicons name="storefront-outline" size={18} color="#9ca3af" />
+            <Text className="text-sm text-gray-500 font-medium">Select a store</Text>
+          </TouchableOpacity>
+        )}
 
-        {/* Submitted History */}
-        {submittedHistory.length > 0 && (
-          <View className="mt-2">
-            {/* Section header */}
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-xs text-gray-400 font-medium uppercase tracking-wide">
-                Submitted Today
-              </Text>
-              {historyEditMode ? (
-                <View className="flex-row items-center gap-3">
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (selectedHistoryIds.size === submittedHistory.length) {
-                        setSelectedHistoryIds(new Set());
-                      } else {
-                        setSelectedHistoryIds(new Set(submittedHistory.map((r) => r.storeId)));
-                      }
-                    }}
-                  >
-                    <Text className="text-xs text-blue-700 font-semibold">
-                      {selectedHistoryIds.size === submittedHistory.length ? 'Deselect All' : 'Select All'}
-                    </Text>
-                  </TouchableOpacity>
-                  {selectedHistoryIds.size > 0 && (
-                    <TouchableOpacity onPress={deleteSelectedHistory}>
-                      <View className="bg-red-500 rounded-full px-3 py-1">
-                        <Text className="text-white text-xs font-bold">
-                          Delete ({selectedHistoryIds.size})
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity onPress={exitHistoryEditMode}>
-                    <Text className="text-xs text-gray-700 font-medium">Cancel</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity onPress={() => setHistoryEditMode(true)}>
-                  <Ionicons name="create-outline" size={18} color="#9ca3af" />
-                </TouchableOpacity>
-              )}
-            </View>
+        {/* Notes */}
+        <Text className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">
+          Notes (optional)
+        </Text>
+        <TextInput
+          className="bg-white rounded-xl border border-gray-100 px-4 py-3 text-sm text-gray-800 mb-4"
+          value={notes}
+          onChangeText={setNotes}
+          placeholder="Add notes for this order..."
+          placeholderTextColor="#9ca3af"
+          multiline
+          numberOfLines={3}
+          textAlignVertical="top"
+          style={{ minHeight: 72 }}
+        />
 
-            {submittedHistory.map((record) => {
-              const key = `${record.storeId}-${record.submittedAt.getTime()}`;
-              const isExpanded = expandedRecords.has(key);
-              const isSelected = selectedHistoryIds.has(record.storeId);
-              return (
-                <View
-                  key={key}
-                  className={`bg-white rounded-xl border mb-2 overflow-hidden ${
-                    isSelected ? 'border-red-200' : 'border-green-100'
-                  }`}
-                >
-                  {/* Header row */}
-                  <TouchableOpacity
-                    className="flex-row items-center px-4 py-3"
-                    onPress={() => {
-                      if (historyEditMode) {
-                        toggleHistorySelect(record.storeId);
-                      } else {
-                        setExpandedRecords((prev) => {
-                          const n = new Set(prev);
-                          if (n.has(key)) n.delete(key); else n.add(key);
-                          return n;
-                        });
-                      }
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    {historyEditMode ? (
-                      <View className={`w-5 h-5 rounded border-2 mr-3 items-center justify-center ${
-                        isSelected ? 'bg-red-500 border-red-500' : 'border-gray-300 bg-white'
-                      }`}>
-                        {isSelected && <Ionicons name="checkmark" size={12} color="#fff" />}
-                      </View>
-                    ) : (
-                      <View className="w-8 h-8 bg-green-50 rounded-full items-center justify-center mr-3">
-                        <Ionicons name="checkmark-circle" size={18} color="#16a34a" />
-                      </View>
-                    )}
-                    <View className="flex-1">
-                      <Text className="text-sm font-bold text-gray-800" numberOfLines={1}>
-                        {record.storeName}
-                      </Text>
-                      <Text className="text-xs text-gray-400 mt-0.5">
-                        {record.itemCount} item{record.itemCount !== 1 ? 's' : ''} · {formatShortDate(record.submittedAt.toISOString())}
-                      </Text>
-                    </View>
-                    <Text className="text-sm font-bold text-green-600 mr-3">
-                      {formatCurrency(record.subtotal)}
-                    </Text>
-                    {!historyEditMode && (
-                      <Ionicons
-                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                        size={16}
-                        color="#9ca3af"
-                      />
-                    )}
-                  </TouchableOpacity>
-
-                  {/* Expandable details */}
-                  {!historyEditMode && isExpanded && (
-                    <View className="border-t border-gray-100">
-                      {record.items.map((item, index) => (
-                        <View
-                          key={item.product_id}
-                          className={`flex-row items-center px-4 py-2.5 ${
-                            index < record.items.length - 1 ? 'border-b border-gray-50' : ''
-                          }`}
-                        >
-                          <View className="flex-1 mr-3">
-                            <Text className="text-sm text-gray-800" numberOfLines={1}>
-                              {item.product_name}
-                            </Text>
-                            <Text className="text-xs text-gray-400 mt-0.5">
-                              {formatCurrency(item.unit_price)} × {item.quantity}
-                            </Text>
-                          </View>
-                          <Text className="text-sm font-semibold text-gray-700">
-                            {formatCurrency(item.line_total)}
-                          </Text>
-                        </View>
-                      ))}
-                      <View className="flex-row justify-between items-center px-4 py-2.5 bg-green-50 border-t border-green-100">
-                        <Text className="text-sm font-bold text-gray-700">Total</Text>
-                        <Text className="text-sm font-bold text-green-600">
-                          {formatCurrency(record.subtotal)}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              );
-            })}
+        {/* Error */}
+        {submitError && (
+          <View className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+            <Text className="text-red-600 text-xs text-center">{submitError}</Text>
           </View>
         )}
       </ScrollView>
 
-      {/* Store picker modal (non-empty state) */}
+      {/* Fixed bottom: Submit button */}
+      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-4" style={{ paddingBottom: 32 }}>
+        <View className="flex-row items-center justify-between mb-3">
+          <Text className="text-sm text-gray-600">Total</Text>
+          <Text className="text-xl font-extrabold text-blue-600">
+            {formatCurrency(draftSubtotal)}
+          </Text>
+        </View>
+        <TouchableOpacity
+          className={`rounded-xl py-4 items-center ${
+            isSubmitting ? 'bg-green-400' : !selectedStore ? 'bg-gray-300' : 'bg-green-500'
+          }`}
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <View className="flex-row items-center gap-2">
+              <ActivityIndicator size="small" color="#fff" />
+              <Text className="text-white text-sm font-bold">Submitting...</Text>
+            </View>
+          ) : (
+            <Text className="text-white text-sm font-bold">
+              {!selectedStore ? 'Select a store to submit' : 'Submit Order'}
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Store Picker Modal */}
       <StorePickerModal
         visible={showStoreModal}
         onClose={() => setShowStoreModal(false)}
-        stores={availableStores}
+        stores={stores.filter((s) => s.is_active)}
         loading={storesLoading}
         creatingCustom={creatingStore}
         onSelect={(store) => {
-          addStoreOrder(store.id, store.name);
+          setSelectedStore({ id: store.id, name: store.name });
           setShowStoreModal(false);
         }}
         onAddCustom={handleAddCustomStore}
@@ -512,6 +409,18 @@ function StorePickerModal({
 }) {
   const [newName, setNewName] = useState('');
   const [query, setQuery] = useState('');
+  const [topStores, setTopStores] = useState<{ store_id: string; store_name: string; order_count: number }[]>([]);
+  const [topLoading, setTopLoading] = useState(false);
+
+  // Fetch top stores when modal opens
+  React.useEffect(() => {
+    if (!visible) return;
+    setTopLoading(true);
+    getTopStores(5)
+      .then(setTopStores)
+      .catch(() => setTopStores([]))
+      .finally(() => setTopLoading(false));
+  }, [visible]);
 
   const trimmedNew = newName.trim();
   const filtered = query.trim()
@@ -528,6 +437,18 @@ function StorePickerModal({
     setNewName('');
     setQuery('');
     onSelect(store);
+  }
+
+  function handleTopStoreSelect(storeId: string, storeName: string) {
+    const store = stores.find((s) => s.id === storeId);
+    if (store) {
+      handleSelect(store);
+    } else {
+      // Store exists in orders but may not be in the active stores list
+      onSelect({ id: storeId, name: storeName } as Store);
+      setNewName('');
+      setQuery('');
+    }
   }
 
   function handleAdd() {
@@ -547,15 +468,41 @@ function StorePickerModal({
           <View className="bg-white rounded-t-2xl px-5 pt-5 pb-10">
             {/* Header */}
             <View className="flex-row items-center justify-between mb-5">
-              <Text className="text-base font-bold text-gray-800">Add Store</Text>
+              <Text className="text-base font-bold text-gray-800">Select Store</Text>
               <TouchableOpacity onPress={handleClose}>
                 <Ionicons name="close" size={22} color="#9ca3af" />
               </TouchableOpacity>
             </View>
 
-            {/* Inline: Store Name label + input + Add button */}
+            {/* Top Stores - quick shortcut */}
+            {!topLoading && topStores.length > 0 && !query.trim() && (
+              <View className="mb-4">
+                <Text className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">
+                  Top Stores
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {topStores.map((ts) => (
+                    <TouchableOpacity
+                      key={ts.store_id}
+                      className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 flex-row items-center gap-1.5"
+                      onPress={() => handleTopStoreSelect(ts.store_id, ts.store_name)}
+                    >
+                      <Ionicons name="star" size={12} color="#3b82f6" />
+                      <Text className="text-xs font-semibold text-blue-700" numberOfLines={1}>
+                        {ts.store_name}
+                      </Text>
+                      <Text className="text-[10px] text-blue-400">
+                        ({ts.order_count})
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Create new store */}
             <View className="flex-row items-center gap-2 mb-5">
-              <Text className="text-sm font-semibold text-gray-600 shrink-0">Store Name</Text>
+              <Text className="text-sm font-semibold text-gray-600 shrink-0">New Store</Text>
               <TextInput
                 className="flex-1 bg-gray-100 rounded-lg px-3 py-2.5 text-sm text-gray-800"
                 value={newName}

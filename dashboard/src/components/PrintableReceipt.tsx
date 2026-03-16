@@ -22,46 +22,46 @@ const DASH = '------------------------------------------------';
 const s = {
   root: {
     fontFamily: "'Courier New', Courier, monospace",
-    padding: '8px 10px',
-    maxWidth: '300px',
+    padding: '4px 4px',
+    maxWidth: '55mm',
     margin: '0 auto',
     color: '#000',
-    fontSize: '11px',
-    lineHeight: 1.4,
+    fontSize: '8px',
+    lineHeight: 1.3,
   },
   center: { textAlign: 'center' as const },
   bold: { fontWeight: 'bold' as const },
   divider: {
     textAlign: 'center' as const,
-    fontSize: '11px',
+    fontSize: '8px',
     color: '#444',
-    margin: '4px 0',
+    margin: '2px 0',
     overflow: 'hidden' as const,
     whiteSpace: 'nowrap' as const,
     letterSpacing: '-0.5px',
   },
   companyName: {
-    fontSize: '14px',
+    fontSize: '10px',
     fontWeight: 'bold' as const,
     textTransform: 'uppercase' as const,
-    letterSpacing: '1px',
+    letterSpacing: '0.5px',
     textAlign: 'center' as const,
   },
-  subText: { fontSize: '10px', textAlign: 'center' as const },
-  metaRow: { display: 'flex', justifyContent: 'space-between', gap: '4px' },
+  subText: { fontSize: '7px', textAlign: 'center' as const },
+  metaRow: { display: 'flex', justifyContent: 'space-between', gap: '2px' },
   metaLabel: { fontWeight: 'bold' as const, whiteSpace: 'nowrap' as const },
-  table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: '11px' },
-  thLeft: { textAlign: 'left' as const, fontWeight: 'bold' as const, paddingBottom: '2px', borderBottom: '1px solid #000' },
-  thCenter: { textAlign: 'center' as const, fontWeight: 'bold' as const, paddingBottom: '2px', borderBottom: '1px solid #000' },
-  thRight: { textAlign: 'right' as const, fontWeight: 'bold' as const, paddingBottom: '2px', borderBottom: '1px solid #000' },
-  tdLeft: { textAlign: 'left' as const, paddingTop: '2px', paddingBottom: '2px', verticalAlign: 'top' as const },
-  tdCenter: { textAlign: 'center' as const, paddingTop: '2px', paddingBottom: '2px', verticalAlign: 'top' as const },
-  tdRight: { textAlign: 'right' as const, paddingTop: '2px', paddingBottom: '2px', verticalAlign: 'top' as const },
-  totalRow: { display: 'flex', justifyContent: 'space-between', fontSize: '11px' },
-  grandTotal: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 'bold' as const },
-  sigLine: { borderBottom: '1px solid #000', minHeight: '24px' },
-  sigLabel: { textAlign: 'center' as const, fontSize: '10px', paddingTop: '2px' },
-  footer: { textAlign: 'center' as const, fontSize: '9px', color: '#444', marginTop: '8px', whiteSpace: 'pre-wrap' as const },
+  table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: '8px' },
+  thLeft: { textAlign: 'left' as const, fontWeight: 'bold' as const, paddingBottom: '1px', borderBottom: '1px solid #000' },
+  thCenter: { textAlign: 'center' as const, fontWeight: 'bold' as const, paddingBottom: '1px', borderBottom: '1px solid #000' },
+  thRight: { textAlign: 'right' as const, fontWeight: 'bold' as const, paddingBottom: '1px', borderBottom: '1px solid #000' },
+  tdLeft: { textAlign: 'left' as const, paddingTop: '1px', paddingBottom: '1px', verticalAlign: 'top' as const },
+  tdCenter: { textAlign: 'center' as const, paddingTop: '1px', paddingBottom: '1px', verticalAlign: 'top' as const },
+  tdRight: { textAlign: 'right' as const, paddingTop: '1px', paddingBottom: '1px', verticalAlign: 'top' as const },
+  totalRow: { display: 'flex', justifyContent: 'space-between', fontSize: '8px' },
+  grandTotal: { display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' as const },
+  sigLine: { borderBottom: '1px solid #000', minHeight: '16px' },
+  sigLabel: { textAlign: 'center' as const, fontSize: '7px', paddingTop: '1px' },
+  footer: { textAlign: 'center' as const, fontSize: '7px', color: '#444', marginTop: '4px', whiteSpace: 'pre-wrap' as const },
 } as const;
 
 export function PrintableReceipt({ order, companyOverride }: PrintableReceiptProps) {
@@ -79,7 +79,7 @@ export function PrintableReceipt({ order, companyOverride }: PrintableReceiptPro
   return (
     <div id="printable-receipt" style={s.root}>
       {/* Header */}
-      <div style={{ textAlign: 'center', marginBottom: '4px' }}>
+      <div className="receipt-section" style={{ textAlign: 'center', marginBottom: '2px' }}>
         <div style={s.companyName}>{companyName}</div>
         {address && <div style={s.subText}>{address}</div>}
         {phone && <div style={s.subText}>Tel: {phone}</div>}
@@ -89,7 +89,7 @@ export function PrintableReceipt({ order, companyOverride }: PrintableReceiptPro
       <div style={s.divider}>{DASH}</div>
 
       {/* Order Metadata */}
-      <div style={{ margin: '4px 0' }}>
+      <div className="receipt-section" style={{ margin: '2px 0' }}>
         <div style={s.metaRow}>
           <span style={s.metaLabel}>Order:</span>
           <span>{order.order_number}</span>
@@ -137,7 +137,7 @@ export function PrintableReceipt({ order, companyOverride }: PrintableReceiptPro
       <div style={s.divider}>{DASH}</div>
 
       {/* Totals */}
-      <div style={{ margin: '4px 0' }}>
+      <div className="receipt-section" style={{ margin: '2px 0' }}>
         <div style={s.totalRow}>
           <span>Subtotal</span>
           <span>{formatCurrency(order.subtotal)}</span>
@@ -146,7 +146,7 @@ export function PrintableReceipt({ order, companyOverride }: PrintableReceiptPro
           <span>Tax</span>
           <span>{formatCurrency(order.tax_amount)}</span>
         </div>
-        <div style={{ ...s.grandTotal, marginTop: '2px', paddingTop: '2px', borderTop: '1px solid #000' }}>
+        <div style={{ ...s.grandTotal, marginTop: '1px', paddingTop: '1px', borderTop: '1px solid #000' }}>
           <span>TOTAL</span>
           <span>{formatCurrency(order.total_amount)}</span>
         </div>
@@ -155,7 +155,7 @@ export function PrintableReceipt({ order, companyOverride }: PrintableReceiptPro
       {order.notes && (
         <>
           <div style={s.divider}>{DASH}</div>
-          <div style={{ fontSize: '10px', margin: '4px 0' }}>
+          <div className="receipt-section" style={{ fontSize: '7px', margin: '2px 0' }}>
             <span style={s.bold}>Notes:</span> {order.notes}
           </div>
         </>
@@ -164,7 +164,7 @@ export function PrintableReceipt({ order, companyOverride }: PrintableReceiptPro
       <div style={s.divider}>{DASH}</div>
 
       {/* Signature Lines */}
-      <div style={{ margin: '20px 0 8px' }}>
+      <div className="receipt-section" style={{ margin: '10px 0 4px' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <tbody>
             <tr>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,9 @@ import {
   RefreshControl,
   useWindowDimensions,
   Platform,
+  Image,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useProducts } from '@/hooks/useProducts';
 import { useCart } from '@/lib/cart';
@@ -33,35 +34,23 @@ export default function ProductsScreen() {
     refreshing,
     refresh,
   } = useProducts();
-  const { addItem, updateQuantity, items, getItemCount, storeOrders, activeStoreId, setActiveStore, submittedStores } = useCart();
+  const { addItem, updateQuantity, draftItems, getDraftItemCount, getDraftSubtotal } = useCart();
   const { unreadCount } = useNotifications();
-  const { storeId } = useLocalSearchParams<{ storeId?: string }>();
-  const cartCount = getItemCount();
+  const draftCount = getDraftItemCount();
+  const draftTotal = getDraftSubtotal();
   const { width } = useWindowDimensions();
   const numColumns = width >= 1024 ? 3 : width >= 768 ? 2 : 1;
-
-  const activeStore = storeOrders.find((o) => o.storeId === activeStoreId) ?? null;
-
-  useEffect(() => {
-    if (!storeId) return;
-    if (submittedStores.has(storeId)) {
-      setActiveStore(null);
-    } else {
-      setActiveStore(storeId);
-    }
-  }, [storeId, submittedStores, setActiveStore]);
 
   // Quantity modal state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
 
   function getCartQuantity(productId: string): number {
-    const item = items.find((i) => i.product_id === productId);
+    const item = draftItems.find((i) => i.product_id === productId);
     return item?.quantity || 0;
   }
 
   function openQuantityModal(product: Product) {
-    if (!activeStoreId) return;
     if (product.stock_quantity <= 0) return;
     const currentInCart = getCartQuantity(product.id);
     setSelectedProduct(product);
@@ -77,10 +66,8 @@ export default function ProductsScreen() {
     if (!selectedProduct || quantity <= 0) return;
     const currentInCart = getCartQuantity(selectedProduct.id);
     if (currentInCart > 0) {
-      // Update existing cart item quantity
       updateQuantity(selectedProduct.id, quantity);
     } else {
-      // Add new item
       addItem(
         {
           id: selectedProduct.id,
@@ -104,17 +91,16 @@ export default function ProductsScreen() {
         style={{ paddingTop: Platform.OS === 'ios' ? 54 : 40 }}
       >
         <View className="flex-row items-center justify-between">
-          <View className="flex-1 mr-3">
+          <View className="flex-1 mr-3 flex-row items-center gap-2">
+            <Image
+              source={require('@/assets/logo.png')}
+              style={{ width: 28, height: 28, borderRadius: 6 }}
+              resizeMode="contain"
+            />
             <Text className="text-base font-bold text-gray-800" numberOfLines={1}>
-              POS App
+              GELS
             </Text>
-            {activeStore ? (
-              <Text className="text-xs text-blue-600 mt-0.5" numberOfLines={1}>
-                For: {activeStore.storeName}
-              </Text>
-            ) : (
-              <Text className="text-xs text-gray-400 mt-0.5">{today}</Text>
-            )}
+            <Text className="text-xs text-gray-400">{today}</Text>
           </View>
           <View className="flex-row items-center gap-3">
             {/* Notifications button */}
@@ -136,18 +122,6 @@ export default function ProductsScreen() {
               onPress={() => router.push('/(collector)/orders')}
             >
               <Ionicons name="receipt-outline" size={22} color="#374151" />
-            </TouchableOpacity>
-            {/* Cart button */}
-            <TouchableOpacity
-              className="relative"
-              onPress={() => router.push('/(collector)/cart')}
-            >
-              <Ionicons name="bag-outline" size={24} color="#374151" />
-              {cartCount > 0 && (
-                <View className="absolute -top-2 -right-2 bg-blue-500 rounded-full min-w-[18px] h-[18px] items-center justify-center">
-                  <Text className="text-white text-[10px] font-bold">{cartCount}</Text>
-                </View>
-              )}
             </TouchableOpacity>
             {/* Profile button */}
             <TouchableOpacity onPress={() => router.push('/(collector)/settings')}>
@@ -178,22 +152,6 @@ export default function ProductsScreen() {
         </View>
       </View>
 
-      {/* No-store banner */}
-      {!activeStoreId && (
-        <TouchableOpacity
-          className="mx-3 mt-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex-row items-center gap-3"
-          onPress={() => router.push('/(collector)/cart')}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="storefront-outline" size={20} color="#3b82f6" />
-          <View className="flex-1">
-            <Text className="text-sm font-bold text-blue-700">No store selected</Text>
-            <Text className="text-xs text-blue-500 mt-0.5">Tap to go to cart and select a store to start ordering</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color="#93c5fd" />
-        </TouchableOpacity>
-      )}
-
       {/* Product Feed */}
       {error ? (
         <View className="px-4 pt-6">
@@ -217,7 +175,7 @@ export default function ProductsScreen() {
           data={products}
           keyExtractor={(item) => item.id}
           numColumns={numColumns}
-          contentContainerStyle={{ padding: 12, paddingBottom: 40 }}
+          contentContainerStyle={{ padding: 12, paddingBottom: draftCount > 0 ? 100 : 40 }}
           columnWrapperStyle={numColumns > 1 ? { gap: 10 } : undefined}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={refresh} />
@@ -310,6 +268,31 @@ export default function ProductsScreen() {
             );
           }}
         />
+      )}
+
+      {/* Floating Cart Button */}
+      {draftCount > 0 && (
+        <TouchableOpacity
+          className="absolute bottom-6 left-4 right-4 bg-blue-500 rounded-2xl px-5 py-4 flex-row items-center justify-between shadow-lg"
+          style={{ elevation: 10 }}
+          onPress={() => router.push('/(collector)/cart')}
+          activeOpacity={0.9}
+        >
+          <View className="flex-row items-center gap-3">
+            <View className="bg-white/20 rounded-full w-8 h-8 items-center justify-center">
+              <Ionicons name="bag-handle" size={18} color="#fff" />
+            </View>
+            <View>
+              <Text className="text-white text-sm font-bold">
+                {draftCount} item{draftCount !== 1 ? 's' : ''}
+              </Text>
+              <Text className="text-white/70 text-xs">Tap to checkout</Text>
+            </View>
+          </View>
+          <Text className="text-white text-lg font-extrabold">
+            {formatCurrency(draftTotal)}
+          </Text>
+        </TouchableOpacity>
       )}
 
       {/* Quantity Modal */}

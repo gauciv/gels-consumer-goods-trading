@@ -26,7 +26,7 @@ export default function CollectorLayout() {
       }}
     >
       <Stack.Screen name="products" options={{ headerShown: false }} />
-      <Stack.Screen name="cart" options={{ title: 'Stores Order Summary' }} />
+      <Stack.Screen name="cart" options={{ title: 'Checkout' }} />
       <Stack.Screen name="confirmation" options={{ headerShown: false }} />
       <Stack.Screen name="orders" options={{ title: 'Order History' }} />
       <Stack.Screen name="settings" options={{ title: 'Profile' }} />

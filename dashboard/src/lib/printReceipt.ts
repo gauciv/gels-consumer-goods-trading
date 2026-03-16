@@ -1,14 +1,14 @@
 /**
  * Prints a receipt by rendering it into a hidden iframe.
- * This ensures the print preview matches the 80mm thermal receipt size
- * instead of showing the full page layout.
+ * Uses Business Card size (55mm x 85mm) by default
+ * with proper page break handling for long item lists.
  */
 export function printReceiptElement(receiptEl: HTMLElement) {
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.left = '-9999px';
   iframe.style.top = '0';
-  iframe.style.width = '80mm';
+  iframe.style.width = '55mm';
   iframe.style.height = '0';
   iframe.style.border = 'none';
   document.body.appendChild(iframe);
@@ -25,11 +25,11 @@ export function printReceiptElement(receiptEl: HTMLElement) {
 <head>
 <style>
   @page {
-    size: 80mm auto;
-    margin: 0;
+    size: 55mm 85mm;
+    margin: 2mm;
   }
   html, body {
-    width: 80mm;
+    width: 55mm;
     margin: 0;
     padding: 0;
     background: #fff;
@@ -41,6 +41,7 @@ export function printReceiptElement(receiptEl: HTMLElement) {
   }
   table {
     display: table !important;
+    page-break-inside: auto !important;
   }
   thead {
     display: table-header-group !important;
@@ -50,9 +51,15 @@ export function printReceiptElement(receiptEl: HTMLElement) {
   }
   tr {
     display: table-row !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
   th, td {
     display: table-cell !important;
+  }
+  .receipt-section {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 </style>
 </head>

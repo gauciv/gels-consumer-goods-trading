@@ -67,16 +67,17 @@ function Sparkline({ data, color = '#5B9BD5' }: { data: number[]; color?: string
 
 // --- Hourly bar chart ---
 
-function HourlyChart({ data, color = '#5B9BD5' }: { data: number[]; color?: string }) {
-  // Always show at least 12 hours for a consistent look
-  const padded = data.length < 12 ? [...data, ...Array(12 - data.length).fill(0)] : data;
+function HourlyChart({ data, labels, color = '#5B9BD5' }: { data: number[]; labels?: string[]; color?: string }) {
+  // Always show at least 12 bars for a consistent look (only for unlabelled/hourly mode)
+  const padded = !labels && data.length < 12 ? [...data, ...Array(12 - data.length).fill(0)] : data;
   const max = Math.max(...padded, 1);
-  const labelStep = padded.length <= 12 ? 2 : 3;
+  const labelStep = padded.length <= 12 ? 2 : padded.length <= 16 ? 2 : 3;
   return (
     <div className="flex items-end gap-[3px] h-[72px]" aria-hidden="true">
       {padded.map((v, i) => {
         const pct = (v / max) * 100;
-        const isFuture = i >= data.length;
+        const isFuture = !labels && i >= data.length;
+        const label = labels ? labels[i] : String(i).padStart(2, '0');
         return (
           <div key={i} className="flex flex-col items-center gap-1 flex-1 min-w-0">
             <div
@@ -88,7 +89,7 @@ function HourlyChart({ data, color = '#5B9BD5' }: { data: number[]; color?: stri
               }}
             />
             {i % labelStep === 0 && (
-              <span className={cn('text-[8px] tabular-nums leading-none', isFuture ? 'text-[#8FAABE]/15' : 'text-[#8FAABE]/40')}>{String(i).padStart(2, '0')}</span>
+              <span className={cn('text-[8px] tabular-nums leading-none', isFuture ? 'text-[#8FAABE]/15' : 'text-[#8FAABE]/40')}>{label}</span>
             )}
           </div>
         );
@@ -241,21 +242,69 @@ export function DashboardPage() {
   }, [rangeRevenue, todayOrders.length, activeCollectors, yesterdayData, timeRange]);
 
   const hourlyData = useMemo(() => {
-    const today = new Date().toDateString();
-    const todayOrd = orders.filter((o) => new Date(o.created_at).toDateString() === today);
-    const currentHour = new Date().getHours();
-    const buckets = Array(Math.max(currentHour + 1, 2)).fill(0);
-    todayOrd.forEach((o) => {
-      const h = new Date(o.created_at).getHours();
-      if (h < buckets.length) buckets[h]++;
+    if (timeRange === 'today') {
+      const today = new Date().toDateString();
+      const todayOrd = filteredOrders.filter((o) => new Date(o.created_at).toDateString() === today);
+      const currentHour = new Date().getHours();
+      const buckets = Array(Math.max(currentHour + 1, 2)).fill(0);
+      todayOrd.forEach((o) => {
+        const h = new Date(o.created_at).getHours();
+        if (h < buckets.length) buckets[h]++;
+      });
+      const revBuckets = Array(Math.max(currentHour + 1, 2)).fill(0);
+      todayOrd.filter((o) => o.status === 'completed').forEach((o) => {
+        const h = new Date(o.created_at).getHours();
+        if (h < revBuckets.length) revBuckets[h] += o.total_amount;
+      });
+      return { orders: buckets, revenue: revBuckets, labels: undefined as string[] | undefined };
+    }
+    // Week/month: show daily buckets
+    const now = new Date();
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    if (timeRange === 'week') {
+      const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+      const buckets = Array(7).fill(0);
+      const revBuckets = Array(7).fill(0);
+      const labels: string[] = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(weekStart);
+        d.setDate(d.getDate() + i);
+        labels.push(dayNames[d.getDay()]);
+      }
+      filteredOrders.forEach((o) => {
+        const d = new Date(o.created_at);
+        const diff = Math.floor((d.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24));
+        if (diff >= 0 && diff < 7) {
+          buckets[diff]++;
+          if (o.status === 'completed') revBuckets[diff] += o.total_amount;
+        }
+      });
+      return { orders: buckets, revenue: revBuckets, labels };
+    }
+
+    // Month: daily buckets
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const dayCount = Math.min(now.getDate(), daysInMonth);
+    const buckets = Array(dayCount).fill(0);
+    const revBuckets = Array(dayCount).fill(0);
+    const labels = Array.from({ length: dayCount }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth(), i + 1);
+      return i === 0 || (i + 1) % 5 === 0 || i === dayCount - 1
+        ? `${monthNames[d.getMonth()]} ${i + 1}`
+        : String(i + 1);
     });
-    const revBuckets = Array(Math.max(currentHour + 1, 2)).fill(0);
-    todayOrd.filter((o) => o.status === 'completed').forEach((o) => {
-      const h = new Date(o.created_at).getHours();
-      if (h < revBuckets.length) revBuckets[h] += o.total_amount;
+    filteredOrders.forEach((o) => {
+      const d = new Date(o.created_at);
+      const dayIdx = d.getDate() - 1;
+      if (dayIdx >= 0 && dayIdx < dayCount) {
+        buckets[dayIdx]++;
+        if (o.status === 'completed') revBuckets[dayIdx] += o.total_amount;
+      }
     });
-    return { orders: buckets, revenue: revBuckets };
-  }, [orders]);
+    return { orders: buckets, revenue: revBuckets, labels };
+  }, [filteredOrders, timeRange]);
 
   const topProducts = useMemo(() => {
     const productMap = new Map<string, { name: string; qty: number; revenue: number }>();
@@ -342,8 +391,8 @@ export function DashboardPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <MetricCard title="Revenue" value={formatCurrency(rangeRevenue)} icon={TrendingUp} accent="bg-[#5B9BD5]/15 text-[#5B9BD5]" trend={trends.revenue} sparkData={timeRange === 'today' ? hourlyData.revenue : undefined} sparkColor="#5B9BD5" />
-          <MetricCard title="Orders" value={filteredOrders.length} icon={ShoppingCart} accent="bg-[#7EB8E0]/15 text-[#7EB8E0]" trend={trends.orders} sparkData={timeRange === 'today' ? hourlyData.orders : undefined} sparkColor="#7EB8E0" />
+          <MetricCard title="Revenue" value={formatCurrency(rangeRevenue)} icon={TrendingUp} accent="bg-[#5B9BD5]/15 text-[#5B9BD5]" trend={trends.revenue} sparkData={hourlyData.revenue} sparkColor="#5B9BD5" />
+          <MetricCard title="Orders" value={filteredOrders.length} icon={ShoppingCart} accent="bg-[#7EB8E0]/15 text-[#7EB8E0]" trend={trends.orders} sparkData={hourlyData.orders} sparkColor="#7EB8E0" />
           <MetricCard title="Pending" value={pendingOrders.length} icon={Clock} accent="bg-[#E5C07B]/15 text-[#E5C07B]" />
           <MetricCard title="Collectors" value={activeCollectors} icon={Users} accent="bg-[#98C379]/15 text-[#98C379]" trend={trends.collectors} />
         </div>
@@ -351,19 +400,21 @@ export function DashboardPage() {
 
       {/* Row 2: Hourly chart (2 cols) + Order Status (1 col) + Collectors (1 col) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Hourly Activity */}
+        {/* Activity Chart */}
         <section className="md:col-span-2 bg-[#162F4D] border border-[#1E3F5E]/60 rounded-xl p-4 min-h-[120px]">
-          <h2 className="text-[10px] font-bold text-[#8FAABE]/50 uppercase tracking-wider mb-3">Hourly Activity</h2>
+          <h2 className="text-[10px] font-bold text-[#8FAABE]/50 uppercase tracking-wider mb-3">
+            {timeRange === 'today' ? 'Hourly Activity' : timeRange === 'week' ? 'Daily Activity (This Week)' : 'Daily Activity (This Month)'}
+          </h2>
           {loading ? (
             <div className="h-[72px] bg-[#1A3755] rounded animate-pulse" />
           ) : hourlyData.orders.every((v) => v === 0) ? (
             <div className="flex flex-col items-center justify-center h-[72px] gap-1.5">
               <BarChart3 size={18} className="text-[#8FAABE]/15" />
-              <p className="text-[11px] text-[#8FAABE]/40 font-medium">No activity recorded today</p>
+              <p className="text-[11px] text-[#8FAABE]/40 font-medium">No activity recorded</p>
               <p className="text-[9px] text-[#8FAABE]/25">Orders will appear here once transactions start</p>
             </div>
           ) : (
-            <HourlyChart data={hourlyData.orders} color="#5B9BD5" />
+            <HourlyChart data={hourlyData.orders} labels={hourlyData.labels} color="#5B9BD5" />
           )}
         </section>
 

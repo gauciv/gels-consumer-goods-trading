@@ -100,6 +100,15 @@ export function useProducts() {
     await fetchProducts({ page: 1 });
   }
 
+  async function deleteProducts(ids: string[]): Promise<void> {
+    const { error: err } = await supabase
+      .from('products')
+      .delete()
+      .in('id', ids);
+    if (err) throw err;
+    await fetchProducts({ page: 1 });
+  }
+
   async function batchCreateProducts(rows: Partial<Product>[]): Promise<void> {
     const { error: err } = await supabase.from('products').insert(rows);
     if (err) throw err;
@@ -126,6 +135,7 @@ export function useProducts() {
     createProduct,
     updateProduct,
     deleteProduct,
+    deleteProducts,
     batchCreateProducts,
     clearAllProducts,
   };

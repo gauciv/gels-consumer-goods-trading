@@ -17,25 +17,33 @@ export type SubmittedRecord = {
 };
 
 interface CartContextType {
+  // Draft cart (current ordering session, no store assigned yet)
+  draftItems: CartItem[];
+  addDraftItem: (product: { id: string; name: string; price: number; stock_quantity: number }, quantity?: number) => void;
+  removeDraftItem: (productId: string) => void;
+  updateDraftQuantity: (productId: string, quantity: number) => void;
+  getDraftSubtotal: () => number;
+  getDraftItemCount: () => number;
+  clearDraft: () => void;
+
+  // Legacy store-based cart (kept for backward compat with existing store cards)
   storeOrders: StoreOrder[];
   activeStoreId: string | null;
   setActiveStore: (id: string | null) => void;
   addStoreOrder: (id: string, name: string) => void;
   removeStoreOrder: (id: string) => void;
+  renameStoreOrder: (id: string, newName: string) => void;
   isStoreAdded: (id: string) => boolean;
-  // operate on activeStoreId:
   items: CartItem[];
   addItem: (product: { id: string; name: string; price: number; stock_quantity: number }, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
-  // operate on a specific store (for cart screen):
   removeItemFromStore: (storeId: string, productId: string) => void;
   updateQuantityInStore: (storeId: string, productId: string, quantity: number) => void;
   getStoreItems: (storeId: string) => CartItem[];
   getStoreSubtotal: (storeId: string) => number;
   getItemCount: () => number;
   clearAll: () => void;
-  // submitted tracking (persists across navigation):
   submittedStores: Set<string>;
   submittedHistory: SubmittedRecord[];
   markStoreSubmitted: (storeId: string, storeName: string, itemCount: number, subtotal: number, items: CartItem[]) => void;
@@ -48,6 +56,78 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
   const [submittedStores, setSubmittedStores] = useState<Set<string>>(new Set());
   const [submittedHistory, setSubmittedHistory] = useState<SubmittedRecord[]>([]);
+  const [draftItems, setDraftItems] = useState<CartItem[]>([]);
+
+  // ─── Draft cart operations ───────────────────────────────────────────
+
+  const addDraftItem = useCallback(
+    (product: { id: string; name: string; price: number; stock_quantity: number }, quantity = 1) => {
+      if (product.price < 0 || product.stock_quantity < 0 || quantity <= 0) return;
+      setDraftItems((prev) => {
+        const existing = prev.find((i) => i.product_id === product.id);
+        if (existing) {
+          const newQty = existing.quantity + quantity;
+          if (newQty > product.stock_quantity) return prev;
+          return prev.map((i) =>
+            i.product_id === product.id
+              ? { ...i, quantity: newQty, line_total: newQty * i.unit_price }
+              : i
+          );
+        }
+        if (quantity > product.stock_quantity) return prev;
+        return [
+          ...prev,
+          {
+            product_id: product.id,
+            product_name: product.name,
+            unit_price: product.price,
+            quantity,
+            stock_quantity: product.stock_quantity,
+            line_total: quantity * product.price,
+          },
+        ];
+      });
+    },
+    []
+  );
+
+  const removeDraftItem = useCallback((productId: string) => {
+    setDraftItems((prev) => prev.filter((i) => i.product_id !== productId));
+  }, []);
+
+  const updateDraftQuantity = useCallback((productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      setDraftItems((prev) => prev.filter((i) => i.product_id !== productId));
+      return;
+    }
+    setDraftItems((prev) =>
+      prev.map((i) =>
+        i.product_id === productId
+          ? {
+              ...i,
+              quantity: Math.min(quantity, i.stock_quantity),
+              line_total: Math.min(quantity, i.stock_quantity) * i.unit_price,
+            }
+          : i
+      )
+    );
+  }, []);
+
+  const getDraftSubtotal = useCallback(
+    () => draftItems.reduce((sum, i) => sum + i.line_total, 0),
+    [draftItems]
+  );
+
+  const getDraftItemCount = useCallback(
+    () => draftItems.reduce((sum, i) => sum + i.quantity, 0),
+    [draftItems]
+  );
+
+  const clearDraft = useCallback(() => {
+    setDraftItems([]);
+  }, []);
+
+  // ─── Store-based cart operations (legacy) ───────────────────────────
 
   const setActiveStore = useCallback((id: string | null) => {
     setActiveStoreId(id);
@@ -67,6 +147,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setSubmittedHistory((prev) => prev.filter((r) => r.storeId !== id));
   }, []);
 
+  const renameStoreOrder = useCallback((id: string, newName: string) => {
+    setStoreOrders((prev) =>
+      prev.map((o) => o.storeId === id ? { ...o, storeName: newName } : o)
+    );
+    setSubmittedHistory((prev) =>
+      prev.map((r) => r.storeId === id ? { ...r, storeName: newName } : r)
+    );
+  }, []);
+
   const isStoreAdded = useCallback(
     (id: string) => storeOrders.some((o) => o.storeId === id),
     [storeOrders]
@@ -74,85 +163,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = useCallback(
     (product: { id: string; name: string; price: number; stock_quantity: number }, quantity = 1) => {
-      if (!activeStoreId) return;
-      if (product.price < 0 || product.stock_quantity < 0 || quantity <= 0) return;
-      setStoreOrders((prev) =>
-        prev.map((order) => {
-          if (order.storeId !== activeStoreId) return order;
-          const existing = order.items.find((i) => i.product_id === product.id);
-          if (existing) {
-            const newQty = existing.quantity + quantity;
-            if (newQty > product.stock_quantity) return order;
-            return {
-              ...order,
-              items: order.items.map((i) =>
-                i.product_id === product.id
-                  ? { ...i, quantity: newQty, line_total: newQty * i.unit_price }
-                  : i
-              ),
-            };
-          }
-          if (quantity > product.stock_quantity) return order;
-          return {
-            ...order,
-            items: [
-              ...order.items,
-              {
-                product_id: product.id,
-                product_name: product.name,
-                unit_price: product.price,
-                quantity,
-                stock_quantity: product.stock_quantity,
-                line_total: quantity * product.price,
-              },
-            ],
-          };
-        })
-      );
+      // Now operates on draft items instead of requiring activeStoreId
+      addDraftItem(product, quantity);
     },
-    [activeStoreId]
+    [addDraftItem]
   );
 
   const removeItem = useCallback(
     (productId: string) => {
-      if (!activeStoreId) return;
-      setStoreOrders((prev) =>
-        prev.map((order) =>
-          order.storeId !== activeStoreId
-            ? order
-            : { ...order, items: order.items.filter((i) => i.product_id !== productId) }
-        )
-      );
+      removeDraftItem(productId);
     },
-    [activeStoreId]
+    [removeDraftItem]
   );
 
   const updateQuantity = useCallback(
     (productId: string, quantity: number) => {
-      if (!activeStoreId) return;
-      if (quantity <= 0) {
-        removeItem(productId);
-        return;
-      }
-      setStoreOrders((prev) =>
-        prev.map((order) => {
-          if (order.storeId !== activeStoreId) return order;
-          return {
-            ...order,
-            items: order.items.map((i) =>
-              i.product_id === productId
-                ? {
-                    ...i,
-                    quantity: Math.min(quantity, i.stock_quantity),
-                    line_total: Math.min(quantity, i.stock_quantity) * i.unit_price,
-                  }
-                : i
-            ),
-          };
-        })
-      );
+      updateDraftQuantity(productId, quantity);
     },
-    [activeStoreId, removeItem]
+    [updateDraftQuantity]
   );
 
   const getStoreItems = useCallback(
@@ -205,8 +233,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   const getItemCount = useCallback(
-    () => storeOrders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0), 0),
-    [storeOrders]
+    () => {
+      const storeCount = storeOrders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0), 0);
+      const draftCount = draftItems.reduce((sum, i) => sum + i.quantity, 0);
+      return storeCount + draftCount;
+    },
+    [storeOrders, draftItems]
   );
 
   const markStoreSubmitted = useCallback((storeId: string, storeName: string, itemCount: number, subtotal: number, items: CartItem[]) => {
@@ -215,7 +247,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       { storeId, storeName, itemCount, subtotal, submittedAt: new Date(), items },
       ...prev,
     ]);
-    // Clear items from the live store order so product highlights reset
     setStoreOrders((prev) =>
       prev.map((o) => o.storeId === storeId ? { ...o, items: [] } : o)
     );
@@ -226,21 +257,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setActiveStoreId(null);
     setSubmittedStores(new Set());
     setSubmittedHistory([]);
+    setDraftItems([]);
   }, []);
 
-  const items = useMemo(
-    () => storeOrders.find((o) => o.storeId === activeStoreId)?.items ?? [],
-    [storeOrders, activeStoreId]
-  );
+  // items now reflects draftItems for the products screen
+  const items = useMemo(() => draftItems, [draftItems]);
 
   return (
     <CartContext.Provider
       value={{
+        draftItems,
+        addDraftItem,
+        removeDraftItem,
+        updateDraftQuantity,
+        getDraftSubtotal,
+        getDraftItemCount,
+        clearDraft,
         storeOrders,
         activeStoreId,
         setActiveStore,
         addStoreOrder,
         removeStoreOrder,
+        renameStoreOrder,
         isStoreAdded,
         items,
         addItem,

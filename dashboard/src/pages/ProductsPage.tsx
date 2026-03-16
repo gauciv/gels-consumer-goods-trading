@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Pencil, Trash2, Package, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, ChevronUp, ChevronDown, ChevronRight, CheckSquare, Square, MinusSquare, X } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { cn } from '@/lib/utils';
@@ -48,6 +48,7 @@ export function ProductsPage() {
     loading,
     error,
     deleteProduct,
+    deleteProducts,
     fetchProducts,
   } = useProducts();
 
@@ -59,6 +60,8 @@ export function ProductsPage() {
   const [stockFilter, setStockFilter] = useState<StockFilter>('all');
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   useEffect(() => {
     fetchProducts({
@@ -119,9 +122,61 @@ export function ProductsPage() {
     setDeleteTarget(null);
   }
 
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    try {
+      await deleteProducts(Array.from(selectedIds));
+      toast.success(`${selectedIds.size} product${selectedIds.size !== 1 ? 's' : ''} deleted`);
+      setSelectedIds(new Set());
+    } catch {
+      toast.error('Failed to delete products');
+    }
+    setShowBulkDeleteConfirm(false);
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (products.every((p) => selectedIds.has(p.id))) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(products.map((p) => p.id)));
+    }
+  }
+
+  const allSelected = products.length > 0 && products.every((p) => selectedIds.has(p.id));
+  const someSelected = products.some((p) => selectedIds.has(p.id)) && !allSelected;
+
   return (
     <div className="p-3 bg-[#0D1F33] min-h-full">
-      {/* Top bar: search + stock filter + add button */}
+      {/* Top bar: search + stock filter + add button OR bulk action bar */}
+      {selectedIds.size > 0 ? (
+        <div className="flex items-center gap-2 mb-3 bg-[#5B9BD5]/10 border border-[#5B9BD5]/30 rounded-lg px-3 py-2">
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="text-[#8FAABE]/60 hover:text-[#E8EDF2] transition-colors"
+            title="Clear selection"
+          >
+            <X size={14} />
+          </button>
+          <span className="text-xs font-medium text-[#E8EDF2]">{selectedIds.size} selected</span>
+          <div className="flex-1" />
+          <button
+            onClick={() => setShowBulkDeleteConfirm(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[#E06C75] text-white rounded-lg hover:bg-[#D15B65] transition-colors"
+          >
+            <Trash2 size={12} />
+            Delete Selected
+          </button>
+        </div>
+      ) : (
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8FAABE]/40" />
@@ -152,6 +207,7 @@ export function ProductsPage() {
           Add Product
         </button>
       </div>
+      )}
 
       {/* Status tabs */}
       <div className="bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg p-2 mb-3 flex gap-1.5">
@@ -206,6 +262,11 @@ export function ProductsPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b-2 border-[#1E3F5E]/60 bg-[#1A3755]/50">
+                    <th className="px-2 py-2.5 w-8">
+                      <button onClick={toggleSelectAll} className="text-[#8FAABE]/50 hover:text-[#5B9BD5] transition-colors">
+                        {allSelected ? <CheckSquare size={14} /> : someSelected ? <MinusSquare size={14} /> : <Square size={14} />}
+                      </button>
+                    </th>
                     <th className="px-3 py-2.5 text-left text-[10px] font-semibold text-[#8FAABE]/60 uppercase tracking-wider">SKU</th>
                     <th className="px-3 py-2.5 text-left text-[10px] font-semibold text-[#8FAABE]/60 uppercase tracking-wider cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort('name')}>
                       Name <SortIcon column="name" />
@@ -226,10 +287,18 @@ export function ProductsPage() {
                     <tr
                       key={product.id}
                       tabIndex={0}
-                      className="border-b border-[#1E3F5E]/30 transition-colors hover:bg-[#1A3755]/40 cursor-pointer focus:outline-none focus-visible:bg-[#1A3755]/60"
+                      className={cn(
+                        "border-b border-[#1E3F5E]/30 transition-colors hover:bg-[#1A3755]/40 cursor-pointer focus:outline-none focus-visible:bg-[#1A3755]/60",
+                        selectedIds.has(product.id) && "bg-[#5B9BD5]/5"
+                      )}
                       onClick={() => navigate(`/products/${product.id}/edit`)}
                       onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/products/${product.id}/edit`); }}
                     >
+                      <td className="px-2 py-2 w-8" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => toggleSelect(product.id)} className="text-[#8FAABE]/40 hover:text-[#5B9BD5] transition-colors">
+                          {selectedIds.has(product.id) ? <CheckSquare size={14} className="text-[#5B9BD5]" /> : <Square size={14} />}
+                        </button>
+                      </td>
                       <td className="px-3 py-2 text-[10px] font-mono text-[#8FAABE]/50">{product.sku || '—'}</td>
                       <td className="px-3 py-2">
                         <p className="text-xs text-[#E8EDF2] font-medium">{product.name}</p>
@@ -279,6 +348,16 @@ export function ProductsPage() {
           confirmLabel="Delete"
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {showBulkDeleteConfirm && (
+        <ConfirmDialog
+          title="Delete Selected Products"
+          message={`Are you sure you want to permanently delete ${selectedIds.size} product${selectedIds.size !== 1 ? 's' : ''}? This cannot be undone.`}
+          confirmLabel="Delete All"
+          onConfirm={handleBulkDelete}
+          onCancel={() => setShowBulkDeleteConfirm(false)}
         />
       )}
     </div>

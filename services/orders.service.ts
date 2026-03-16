@@ -19,13 +19,24 @@ export async function createOrder(data: CreateOrderRequest): Promise<CreateOrder
 export async function getOrders(filters?: OrderFilters): Promise<PaginatedResponse<Order>> {
   let query = supabase
     .from('orders')
-    .select('*, profiles:collector_id(full_name, email), stores:store_id(name)', { count: 'exact' })
-    .order('created_at', { ascending: false });
+    .select('*, profiles:collector_id(full_name, email), stores:store_id(name), order_items(*)', { count: 'exact' });
 
   if (filters?.status) query = query.eq('status', filters.status);
+  if (filters?.store_id) query = query.eq('store_id', filters.store_id);
+
+  const sortBy = filters?.sort_by || 'newest';
+  if (sortBy === 'oldest') {
+    query = query.order('created_at', { ascending: true });
+  } else if (sortBy === 'highest') {
+    query = query.order('total_amount', { ascending: false });
+  } else if (sortBy === 'lowest') {
+    query = query.order('total_amount', { ascending: true });
+  } else {
+    query = query.order('created_at', { ascending: false });
+  }
 
   const page = filters?.page || 1;
-  const pageSize = filters?.page_size || 50;
+  const pageSize = filters?.page_size || 20;
   query = query.range((page - 1) * pageSize, page * pageSize - 1);
 
   const { data, error, count } = await query;

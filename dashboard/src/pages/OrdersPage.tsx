@@ -6,7 +6,21 @@ import { PrintableReceipt } from '@/components/PrintableReceipt';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
-import { format, addDays, subDays, isToday, startOfDay, endOfDay } from 'date-fns';
+import {
+  format,
+  addDays,
+  subDays,
+  addMonths,
+  subMonths,
+  isToday,
+  isSameDay,
+  startOfDay,
+  endOfDay,
+  startOfMonth,
+  getDay,
+  getDaysInMonth,
+  isFuture as isFutureDate,
+} from 'date-fns';
 import {
   ChevronRight,
   ChevronLeft,
@@ -22,6 +36,7 @@ import {
   RefreshCw,
   Package,
   ArrowUpDown,
+  Calendar,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { statusBadge } from '@/lib/constants';
@@ -49,10 +64,13 @@ export function OrdersPage() {
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
   const [printOrder, setPrintOrder] = useState<Order | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
 
   const filterRef = useRef<HTMLDivElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
   const statusBarRef = useRef<HTMLDivElement>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
 
   const { orders, loading, error, refetch } = useRealtimeOrders();
 
@@ -64,6 +82,9 @@ export function OrdersPage() {
       }
       if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) {
         setActionMenuId(null);
+      }
+      if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
+        setShowCalendar(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
@@ -186,10 +207,6 @@ export function OrdersPage() {
   }
   function stepDate(dir: number) {
     setSelectedDate((d) => (dir > 0 ? addDays(d, 1) : subDays(d, 1)));
-    setPage(1);
-  }
-  function goToToday() {
-    setSelectedDate(new Date());
     setPage(1);
   }
 
@@ -415,7 +432,7 @@ export function OrdersPage() {
 
       {/* Date stepper */}
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-1">
+        <div className="relative flex items-center gap-1" ref={calendarRef}>
           <button
             onClick={() => stepDate(-1)}
             className="p-1.5 rounded-md text-[#8FAABE]/60 hover:text-[#E8EDF2] hover:bg-[#1A3755] transition-colors"
@@ -424,14 +441,18 @@ export function OrdersPage() {
             <ChevronLeft size={16} />
           </button>
           <button
-            onClick={goToToday}
+            onClick={() => {
+              setCalendarMonth(selectedDate);
+              setShowCalendar((p) => !p);
+            }}
             className={cn(
-              'px-3 py-1 text-xs font-medium rounded-md transition-colors',
+              'px-3 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5',
               isToday(selectedDate)
                 ? 'text-[#E8EDF2] bg-[#162F4D] border border-[#1E3F5E]/60'
                 : 'text-[#5B9BD5] bg-[#5B9BD5]/10 border border-[#5B9BD5]/30 hover:bg-[#5B9BD5]/20'
             )}
           >
+            <Calendar size={12} />
             {dateLabel}
           </button>
           <button
@@ -442,6 +463,104 @@ export function OrdersPage() {
           >
             <ChevronRight size={16} />
           </button>
+
+          {/* Calendar dropdown */}
+          {showCalendar && (() => {
+            const monthStart = startOfMonth(calendarMonth);
+            const startDow = getDay(monthStart); // 0=Sun
+            const daysInMonth = getDaysInMonth(calendarMonth);
+            const days: (Date | null)[] = [];
+            for (let i = 0; i < startDow; i++) days.push(null);
+            for (let d = 1; d <= daysInMonth; d++) {
+              days.push(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), d));
+            }
+
+            return (
+              <div className="absolute left-0 top-full mt-1 w-64 bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg shadow-xl z-50 p-3 animate-in fade-in slide-in-from-top-1 duration-150">
+                {/* Month navigation */}
+                <div className="flex items-center justify-between mb-2">
+                  <button
+                    onClick={() => setCalendarMonth((m) => subMonths(m, 1))}
+                    className="p-1 rounded text-[#8FAABE]/60 hover:text-[#E8EDF2] hover:bg-[#1A3755] transition-colors"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <span className="text-xs font-medium text-[#E8EDF2]">
+                    {format(calendarMonth, 'MMMM yyyy')}
+                  </span>
+                  <button
+                    onClick={() => setCalendarMonth((m) => addMonths(m, 1))}
+                    className="p-1 rounded text-[#8FAABE]/60 hover:text-[#E8EDF2] hover:bg-[#1A3755] transition-colors"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+
+                {/* Day headers */}
+                <div className="grid grid-cols-7 gap-0.5 mb-1">
+                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
+                    <div key={d} className="text-center text-[9px] font-medium text-[#8FAABE]/50 py-1">
+                      {d}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Day grid */}
+                <div className="grid grid-cols-7 gap-0.5">
+                  {days.map((day, i) => {
+                    if (!day) return <div key={`empty-${i}`} />;
+                    const isSelected = isSameDay(day, selectedDate);
+                    const isTodayDate = isToday(day);
+                    const isFutureDay = isFutureDate(day);
+                    return (
+                      <button
+                        key={day.getTime()}
+                        onClick={() => {
+                          setSelectedDate(day);
+                          setPage(1);
+                          setShowCalendar(false);
+                        }}
+                        disabled={isFutureDay}
+                        className={cn(
+                          'w-full aspect-square rounded text-[11px] transition-colors flex items-center justify-center',
+                          isSelected
+                            ? 'bg-[#5B9BD5] text-white font-bold'
+                            : isTodayDate
+                            ? 'text-[#5B9BD5] font-semibold bg-[#5B9BD5]/10 hover:bg-[#5B9BD5]/20'
+                            : isFutureDay
+                            ? 'text-[#8FAABE]/20 cursor-not-allowed'
+                            : 'text-[#E8EDF2]/80 hover:bg-[#1A3755]'
+                        )}
+                      >
+                        {day.getDate()}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Quick actions */}
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#1E3F5E]/40">
+                  <button
+                    onClick={() => {
+                      setSelectedDate(new Date());
+                      setCalendarMonth(new Date());
+                      setPage(1);
+                      setShowCalendar(false);
+                    }}
+                    className="text-[10px] font-medium text-[#5B9BD5] hover:text-[#7EB8E0] transition-colors"
+                  >
+                    Today
+                  </button>
+                  <button
+                    onClick={() => setShowCalendar(false)}
+                    className="text-[10px] font-medium text-[#8FAABE]/50 hover:text-[#8FAABE] transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
         </div>
         <p className="text-[10px] text-[#8FAABE]/50">
           {filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''}

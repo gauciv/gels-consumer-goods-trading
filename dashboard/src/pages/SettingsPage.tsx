@@ -23,8 +23,6 @@ import {
   Pencil,
   Check,
   X,
-  Upload,
-  ImageIcon,
   Plus,
 } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
@@ -142,9 +140,6 @@ export function SettingsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const groupPhotoInputRef = useRef<HTMLInputElement | null>(null);
-  const [groupPhotoUrl, setGroupPhotoUrl] = useState<string | null>(null);
-  const [uploadingGroupPhoto, setUploadingGroupPhoto] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<'Researcher' | 'Developer'>('Researcher');
@@ -190,17 +185,6 @@ export function SettingsPage() {
     loadTeam();
   }, []);
 
-  // Load group photo
-  useEffect(() => {
-    const { data } = supabase.storage.from('avatars').getPublicUrl('team/group-photo.jpg');
-    // Check if the image actually exists by trying to fetch it
-    fetch(data.publicUrl, { method: 'HEAD' })
-      .then((res) => {
-        if (res.ok) setGroupPhotoUrl(`${data.publicUrl}?t=${Date.now()}`);
-      })
-      .catch(() => { /* no group photo yet */ });
-  }, []);
-
   async function handleAvatarUpload(memberId: string, file: File) {
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file');
@@ -231,28 +215,6 @@ export function SettingsPage() {
       toast.error('Failed to upload photo');
     } finally {
       setUploadingId(null);
-    }
-  }
-
-  async function handleGroupPhotoUpload(file: File) {
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      return;
-    }
-    setUploadingGroupPhoto(true);
-    try {
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload('team/group-photo.jpg', file, { upsert: true, contentType: file.type });
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl('team/group-photo.jpg');
-      setGroupPhotoUrl(`${urlData.publicUrl}?t=${Date.now()}`);
-      toast.success('Group photo updated');
-    } catch {
-      toast.error('Failed to upload group photo');
-    } finally {
-      setUploadingGroupPhoto(false);
     }
   }
 
@@ -618,68 +580,6 @@ export function SettingsPage() {
         {/* Credits Tab */}
         {activeTab === 'credits' && (
           <div className="space-y-4">
-            {/* Group Photo Upload */}
-            <div className={sectionCls}>
-              <div className={sectionHeaderCls}>
-                <ImageIcon size={14} className="text-[#5B9BD5]" />
-                <div>
-                  <p className={sectionTitleCls}>Group Photo</p>
-                  <p className={sectionDescCls}>Upload a team group photo</p>
-                </div>
-              </div>
-              <div className="p-4">
-                {groupPhotoUrl ? (
-                  <div className="relative group">
-                    <img
-                      src={groupPhotoUrl}
-                      alt="Team group photo"
-                      className="w-full h-48 object-cover rounded-lg border border-[#1E3F5E]/30"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 rounded-lg transition-colors flex items-center justify-center">
-                      <button
-                        onClick={() => groupPhotoInputRef.current?.click()}
-                        disabled={uploadingGroupPhoto}
-                        className="opacity-0 group-hover:opacity-100 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white/90 text-[#0D1F33] rounded-lg hover:bg-white transition-all"
-                      >
-                        {uploadingGroupPhoto ? (
-                          <Loader2 size={12} className="animate-spin" />
-                        ) : (
-                          <Camera size={12} />
-                        )}
-                        Change Photo
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => groupPhotoInputRef.current?.click()}
-                    disabled={uploadingGroupPhoto}
-                    className="w-full h-36 border-2 border-dashed border-[#1E3F5E]/40 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-[#5B9BD5]/50 hover:bg-[#5B9BD5]/5 transition-colors cursor-pointer"
-                  >
-                    {uploadingGroupPhoto ? (
-                      <Loader2 size={20} className="animate-spin text-[#5B9BD5]" />
-                    ) : (
-                      <>
-                        <Upload size={20} className="text-[#8FAABE]/40" />
-                        <span className="text-[10px] text-[#8FAABE]/50">Click to upload a group photo</span>
-                      </>
-                    )}
-                  </button>
-                )}
-                <input
-                  ref={groupPhotoInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleGroupPhotoUpload(file);
-                    e.target.value = '';
-                  }}
-                />
-              </div>
-            </div>
-
             {/* Team Members */}
           <div className={sectionCls}>
             <div className={sectionHeaderCls}>

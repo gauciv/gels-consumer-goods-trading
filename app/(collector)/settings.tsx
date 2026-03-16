@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
-  Image,
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
@@ -34,12 +33,10 @@ export default function SettingsScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [teamLoading, setTeamLoading] = useState(false);
-  const [groupPhotoUrl, setGroupPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (activeTab === 'credits') {
       loadTeam();
-      loadGroupPhoto();
     }
   }, [activeTab]);
 
@@ -51,18 +48,6 @@ export default function SettingsScreen() {
       .order('sort_order');
     setTeamMembers((data as TeamMember[]) || []);
     setTeamLoading(false);
-  }
-
-  async function loadGroupPhoto() {
-    const { data } = supabase.storage
-      .from('avatars')
-      .getPublicUrl('team/group-photo.jpg');
-    try {
-      const res = await fetch(data.publicUrl, { method: 'HEAD' });
-      if (res.ok) setGroupPhotoUrl(`${data.publicUrl}?t=${Date.now()}`);
-    } catch {
-      // no group photo yet
-    }
   }
 
   async function handleLogout() {
@@ -168,17 +153,6 @@ export default function SettingsScreen() {
 
             {activeTab === 'credits' && (
               <>
-                {/* Group Photo */}
-                {groupPhotoUrl && (
-                  <View className="bg-[#162F4D] rounded-xl overflow-hidden mb-6 border border-[#1E3F5E]/60">
-                    <Image
-                      source={{ uri: groupPhotoUrl }}
-                      className="w-full h-48"
-                      resizeMode="cover"
-                    />
-                  </View>
-                )}
-
                 {teamLoading ? (
                   <View className="items-center py-12">
                     <ActivityIndicator size="large" color="#5B9BD5" />

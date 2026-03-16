@@ -68,24 +68,25 @@ function Sparkline({ data, color = '#5B9BD5' }: { data: number[]; color?: string
 // --- Hourly bar chart ---
 
 function HourlyChart({ data, labels, color = '#5B9BD5' }: { data: number[]; labels?: string[]; color?: string }) {
-  // Always show at least 12 bars for a consistent look (only for unlabelled/hourly mode)
   const padded = !labels && data.length < 12 ? [...data, ...Array(12 - data.length).fill(0)] : data;
   const max = Math.max(...padded, 1);
   const labelStep = padded.length <= 12 ? 2 : padded.length <= 16 ? 2 : 3;
+  const barArea = 76; // px available for bars (remaining ~14px for label + gap)
   return (
-    <div className="flex items-end gap-[3px] h-[72px]" aria-hidden="true">
+    <div className="flex gap-[3px] h-[90px]">
       {padded.map((v, i) => {
-        const pct = (v / max) * 100;
         const isFuture = !labels && i >= data.length;
         const label = labels ? labels[i] : String(i).padStart(2, '0');
+        const barPx = isFuture ? 2 : v > 0 ? Math.max(Math.round((v / max) * barArea), 6) : 2;
         return (
-          <div key={i} className="flex flex-col items-center gap-1 flex-1 min-w-0">
+          <div key={i} className="flex flex-col justify-end items-center gap-1 flex-1 min-w-0">
             <div
-              className="w-full max-w-[12px] rounded-t-sm transition-all duration-200 hover:opacity-80 mx-auto"
+              className="w-full max-w-[14px] rounded-t-sm mx-auto"
+              title={`${label}: ${v}`}
               style={{
-                height: isFuture ? '4%' : `${Math.max(pct, v > 0 ? 8 : 4)}%`,
+                height: `${barPx}px`,
                 backgroundColor: isFuture ? '#1E3F5E' : v > 0 ? color : '#1E3F5E',
-                opacity: isFuture ? 0.1 : v > 0 ? (0.5 + (pct / 100) * 0.5) : 0.2,
+                opacity: isFuture ? 0.15 : v > 0 ? (0.6 + (v / max) * 0.4) : 0.3,
               }}
             />
             {i % labelStep === 0 && (
@@ -243,18 +244,15 @@ export function DashboardPage() {
 
   const hourlyData = useMemo(() => {
     if (timeRange === 'today') {
-      const today = new Date().toDateString();
-      const todayOrd = filteredOrders.filter((o) => new Date(o.created_at).toDateString() === today);
-      const currentHour = new Date().getHours();
-      const buckets = Array(Math.max(currentHour + 1, 2)).fill(0);
-      todayOrd.forEach((o) => {
+      const buckets = Array(24).fill(0);
+      filteredOrders.forEach((o) => {
         const h = new Date(o.created_at).getHours();
-        if (h < buckets.length) buckets[h]++;
+        buckets[h]++;
       });
-      const revBuckets = Array(Math.max(currentHour + 1, 2)).fill(0);
-      todayOrd.filter((o) => o.status === 'completed').forEach((o) => {
+      const revBuckets = Array(24).fill(0);
+      filteredOrders.filter((o) => o.status === 'completed').forEach((o) => {
         const h = new Date(o.created_at).getHours();
-        if (h < revBuckets.length) revBuckets[h] += o.total_amount;
+        revBuckets[h] += o.total_amount;
       });
       return { orders: buckets, revenue: revBuckets, labels: undefined as string[] | undefined };
     }
@@ -308,7 +306,7 @@ export function DashboardPage() {
 
   const topProducts = useMemo(() => {
     const productMap = new Map<string, { name: string; qty: number; revenue: number }>();
-    filteredOrders.forEach((o) => {
+    filteredOrders.filter((o) => o.status === 'completed').forEach((o) => {
       o.order_items?.forEach((item) => {
         const existing = productMap.get(item.product_name) || { name: item.product_name, qty: 0, revenue: 0 };
         existing.qty += item.quantity;
@@ -325,7 +323,7 @@ export function DashboardPage() {
     stores.forEach((s) => storeMap.set(s.id, { name: s.name, orders: 0, revenue: 0 }));
     filteredOrders.forEach((o) => {
       const entry = storeMap.get(o.store_id);
-      if (entry) { entry.orders++; entry.revenue += o.total_amount; }
+      if (entry) { entry.orders++; if (o.status === 'completed') entry.revenue += o.total_amount; }
     });
     return Array.from(storeMap.values()).filter((s) => s.orders > 0).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
   }, [filteredOrders, stores, storesLoading]);
@@ -406,9 +404,9 @@ export function DashboardPage() {
             {timeRange === 'today' ? 'Hourly Activity' : timeRange === 'week' ? 'Daily Activity (This Week)' : 'Daily Activity (This Month)'}
           </h2>
           {loading ? (
-            <div className="h-[72px] bg-[#1A3755] rounded animate-pulse" />
+            <div className="h-[90px] bg-[#1A3755] rounded animate-pulse" />
           ) : hourlyData.orders.every((v) => v === 0) ? (
-            <div className="flex flex-col items-center justify-center h-[72px] gap-1.5">
+            <div className="flex flex-col items-center justify-center h-[90px] gap-1.5">
               <BarChart3 size={18} className="text-[#8FAABE]/15" />
               <p className="text-[11px] text-[#8FAABE]/40 font-medium">No activity recorded</p>
               <p className="text-[9px] text-[#8FAABE]/25">Orders will appear here once transactions start</p>

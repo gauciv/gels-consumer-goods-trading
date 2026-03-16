@@ -61,7 +61,7 @@ interface CollectorRow {
   nickname: string | null;
 }
 
-const ACTIVE_STATUSES = ['pending', 'confirmed', 'processing', 'completed'];
+const NON_CANCELLED_STATUSES = ['pending', 'confirmed', 'processing', 'completed'];
 const PRODUCTS_PAGE_SIZE = 10;
 const DAILY_PAGE_SIZE = 14;
 
@@ -323,8 +323,10 @@ export function AnalyticsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period, customStart, customEnd]);
 
-  const activeOrders = useMemo(() => orders.filter((o) => ACTIVE_STATUSES.includes(o.status)), [orders]);
-  const priorActive = useMemo(() => priorOrders.filter((o) => ACTIVE_STATUSES.includes(o.status)), [priorOrders]);
+  const activeOrders = useMemo(() => orders.filter((o) => NON_CANCELLED_STATUSES.includes(o.status)), [orders]);
+  const priorActive = useMemo(() => priorOrders.filter((o) => NON_CANCELLED_STATUSES.includes(o.status)), [priorOrders]);
+  const completedOrders = useMemo(() => orders.filter((o) => o.status === 'completed'), [orders]);
+  const priorCompleted = useMemo(() => priorOrders.filter((o) => o.status === 'completed'), [priorOrders]);
 
   const { dailyData, totalRevenue, totalOrdersCount, avgOrderValue, revenueGrowth, ordersGrowth, completionRate, completionTrend } = useMemo(() => {
     let startDate: Date;
@@ -338,21 +340,22 @@ export function AnalyticsPage() {
 
     const dailyData: DailyData[] = allDays.map((day) => {
       const dayStr = format(day, 'yyyy-MM-dd');
-      const dayOrders = activeOrders.filter((o) => format(new Date(o.created_at), 'yyyy-MM-dd') === dayStr);
-      return { date: dayStr, orders: dayOrders.length, revenue: dayOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0) };
+      const dayCompleted = completedOrders.filter((o) => format(new Date(o.created_at), 'yyyy-MM-dd') === dayStr);
+      const dayAllActive = activeOrders.filter((o) => format(new Date(o.created_at), 'yyyy-MM-dd') === dayStr);
+      return { date: dayStr, orders: dayAllActive.length, revenue: dayCompleted.reduce((sum, o) => sum + (o.total_amount || 0), 0) };
     });
 
-    const totalRevenue = activeOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+    const totalRevenue = completedOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
     const totalOrdersCount = activeOrders.length;
-    const avgOrderValue = totalOrdersCount > 0 ? totalRevenue / totalOrdersCount : 0;
+    const avgOrderValue = completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0;
 
-    const priorRevenue = priorActive.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+    const priorRevenue = priorCompleted.reduce((sum, o) => sum + (o.total_amount || 0), 0);
     const calcGrowth = (cur: number, prev: number) => prev === 0 ? (cur > 0 ? 100 : 0) : ((cur - prev) / prev) * 100;
 
-    const completedCount = orders.filter((o) => o.status === 'completed').length;
+    const completedCount = completedOrders.length;
     const completionRate = orders.length > 0 ? (completedCount / orders.length) * 100 : 0;
-    const priorCompleted = priorOrders.filter((o) => o.status === 'completed').length;
-    const priorCompRate = priorOrders.length > 0 ? (priorCompleted / priorOrders.length) * 100 : 0;
+    const priorCompCount = priorCompleted.length;
+    const priorCompRate = priorOrders.length > 0 ? (priorCompCount / priorOrders.length) * 100 : 0;
 
     return {
       dailyData,
@@ -364,12 +367,12 @@ export function AnalyticsPage() {
       completionRate,
       completionTrend: calcGrowth(completionRate, priorCompRate),
     };
-  }, [activeOrders, priorActive, orders, priorOrders, period, customStart, customEnd, effectiveDays]);
+  }, [activeOrders, completedOrders, priorActive, priorCompleted, orders, priorOrders, period, customStart, customEnd, effectiveDays]);
 
   const topProducts = useMemo(() => {
     const productMap = new Map<string, { units: number; revenue: number }>();
     for (const item of orderItems) {
-      if (!ACTIVE_STATUSES.includes(item.orders?.status)) continue;
+      if (item.orders?.status !== 'completed') continue;
       const existing = productMap.get(item.product_name) || { units: 0, revenue: 0 };
       productMap.set(item.product_name, { units: existing.units + (item.quantity || 0), revenue: existing.revenue + (item.line_total || 0) });
     }
@@ -382,14 +385,14 @@ export function AnalyticsPage() {
   const storeRevenue = useMemo(() => {
     const map = new Map<string, { name: string; orders: number; revenue: number }>();
     storesList.forEach((s) => map.set(s.id, { name: s.name, orders: 0, revenue: 0 }));
-    activeOrders.forEach((o) => { const e = map.get(o.store_id); if (e) { e.orders++; e.revenue += o.total_amount; } });
+    activeOrders.forEach((o) => { const e = map.get(o.store_id); if (e) { e.orders++; if (o.status === 'completed') e.revenue += o.total_amount; } });
     return Array.from(map.values()).filter((s) => s.orders > 0).sort((a, b) => b.revenue - a.revenue);
   }, [activeOrders, storesList]);
 
   const collectorRevenue = useMemo(() => {
     const map = new Map<string, { name: string; orders: number; revenue: number }>();
     collectorsList.forEach((c) => map.set(c.id, { name: c.nickname || c.full_name, orders: 0, revenue: 0 }));
-    activeOrders.forEach((o) => { const e = map.get(o.collector_id); if (e) { e.orders++; e.revenue += o.total_amount; } });
+    activeOrders.forEach((o) => { const e = map.get(o.collector_id); if (e) { e.orders++; if (o.status === 'completed') e.revenue += o.total_amount; } });
     return Array.from(map.values()).filter((c) => c.orders > 0).sort((a, b) => b.revenue - a.revenue);
   }, [activeOrders, collectorsList]);
 

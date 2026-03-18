@@ -114,27 +114,29 @@ const s = {
   signatureSection: {
     marginTop: '12px',
     fontSize: '7px',
+    border: '1px solid #000',
+    padding: '6px',
   },
   signatureText: {
     fontSize: '7px',
-    marginBottom: '8px',
+    marginBottom: '12px',
     lineHeight: 1.3,
-    textAlign: 'right' as const,
+    textAlign: 'left' as const,
   },
-  signatureLines: {
+  signatureRow: {
     display: 'flex',
-    justifyContent: 'flex-start',
-    gap: '16px',
-    marginTop: '8px',
+    alignItems: 'flex-end',
+    gap: '8px',
+    fontSize: '7px',
   },
   signatureBox: {
+    flex: 1,
     textAlign: 'center' as const,
   },
   signatureLine: {
     borderBottom: '1px solid #000',
-    width: '80px',
+    minHeight: '16px',
     marginBottom: '2px',
-    minHeight: '20px',
   },
   signatureLabel: {
     fontSize: '6px',
@@ -237,15 +239,15 @@ export function PrintableReceipt({ order, companyOverride }: PrintableReceiptPro
         <div style={s.signatureText}>
           Received the above goods and services<br />in good order and condition
         </div>
-        <div style={{ marginTop: '8px', fontSize: '7px', textAlign: 'left' }}>By:</div>
-        <div style={s.signatureLines}>
+        <div style={s.signatureRow}>
+          <span style={{ whiteSpace: 'nowrap' }}>By:</span>
           <div style={s.signatureBox}>
             <div style={s.signatureLine}></div>
             <div style={s.signatureLabel}>Authorized Signature</div>
           </div>
           <div style={s.signatureBox}>
             <div style={s.signatureLine}></div>
-            <div style={s.signatureLabel}>Costumer Signature over printed name</div>
+            <div style={s.signatureLabel}>Customer's Signature Over Printed Name</div>
           </div>
         </div>
       </div>

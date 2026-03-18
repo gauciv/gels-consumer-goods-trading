@@ -122,15 +122,19 @@ const s = {
   signatureRow: {
     display: 'flex',
     alignItems: 'flex-end',
-    gap: '8px',
+    gap: '12px',
     fontSize: '7px',
   },
   signatureBox: {
     flex: 1,
     textAlign: 'center' as const,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
   },
   signatureLine: {
     borderBottom: '1px solid #000',
+    width: '100%',
     minHeight: '16px',
     marginBottom: '2px',
   },

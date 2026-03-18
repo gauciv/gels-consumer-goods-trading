@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   FlatList,
   TouchableOpacity,
-  TextInput,
   Modal,
   RefreshControl,
   ScrollView,
   useWindowDimensions,
   Image,
 } from 'react-native';
+import { Text, TextInput } from '@/components/ScaledText';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,7 +34,7 @@ export default function ProductsScreen() {
     refreshing,
     refresh,
   } = useProducts();
-  const { addItem, updateQuantity, draftItems, getDraftItemCount, getDraftSubtotal } = useCart();
+  const { addItem, updateQuantity, draftItems, getDraftItemCount, getDraftSubtotal, savedOrders } = useCart();
   const { unreadCount } = useNotifications();
   const insets = useSafeAreaInsets();
   const draftCount = getDraftItemCount();
@@ -100,11 +99,24 @@ export default function ProductsScreen() {
               resizeMode="contain"
             />
             <Text className="text-base font-bold text-[#E8EDF2]" numberOfLines={1}>
-              GELS
+              POS App
             </Text>
             <Text className="text-xs text-[#8FAABE]/50">{today}</Text>
           </View>
           <View className="flex-row items-center gap-3">
+            <TouchableOpacity
+              className="relative"
+              onPress={() => router.push('/(collector)/cart')}
+            >
+              <Ionicons name="cart-outline" size={22} color="#E8EDF2" />
+              {savedOrders.length > 0 && (
+                <View className="absolute -top-2 -right-2 bg-[#5B9BD5] rounded-full min-w-[16px] h-[16px] items-center justify-center">
+                  <Text className="text-white text-[9px] font-bold">
+                    {savedOrders.length > 99 ? '99+' : savedOrders.length}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
             <TouchableOpacity
               className="relative"
               onPress={() => router.push('/(collector)/notifications')}

@@ -28,6 +28,7 @@ const s = {
   companyName: {
     fontSize: '9px',
     fontWeight: 'bold' as const,
+    textTransform: 'uppercase' as const,
     textAlign: 'left' as const,
     marginBottom: '1px',
   },
@@ -60,7 +61,6 @@ const s = {
     borderCollapse: 'collapse' as const,
     fontSize: '7.5px',
     marginTop: '3px',
-    border: '1px solid #000',
   },
   thLeft: {
     textAlign: 'left' as const,
@@ -81,27 +81,24 @@ const s = {
     border: '1px solid #000',
   },
   tableHeaderRow: {
-    borderBottom: '1px solid #000',
+    border: '1px solid #000',
   },
   tdLeft: {
     textAlign: 'left' as const,
     padding: '2px',
     verticalAlign: 'top' as const,
-    border: '1px solid #000',
   },
   tdCenter: {
     textAlign: 'center' as const,
     padding: '2px',
     verticalAlign: 'top' as const,
     whiteSpace: 'nowrap' as const,
-    border: '1px solid #000',
   },
   tdRight: {
     textAlign: 'right' as const,
     padding: '2px',
     verticalAlign: 'top' as const,
     whiteSpace: 'nowrap' as const,
-    border: '1px solid #000',
   },
   totalRow: {
     textAlign: 'right' as const,
@@ -116,7 +113,7 @@ export function PrintableReceipt({ order, companyOverride }: PrintableReceiptPro
   const { profile } = useCompanyProfile();
 
   const co = companyOverride || {};
-  const companyName = co.company_name ?? profile?.company_name ?? 'gels consumer trading';
+  const companyName = co.company_name ?? profile?.company_name ?? 'Gels consumer goods trading';
   const address = co.address ?? profile?.address ?? 'Purok Tambis, Curvada\nSan Remigio Cebu, PhIlippines, 6011';
   const phone = co.contact_phone ?? profile?.contact_phone ?? 'Tel.(032)3167836/0936-9445027';
 

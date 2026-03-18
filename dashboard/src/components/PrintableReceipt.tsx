@@ -1,5 +1,4 @@
 import type { Order } from '@/types';
-import { formatCurrency, formatDate } from '@/lib/formatters';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 
 interface CompanyOverride {
@@ -7,9 +6,6 @@ interface CompanyOverride {
   address?: string | null;
   contact_phone?: string | null;
   contact_email?: string | null;
-  receipt_footer?: string | null;
-  prepared_by?: string | null;
-  received_by?: string | null;
 }
 
 interface PrintableReceiptProps {
@@ -17,109 +13,182 @@ interface PrintableReceiptProps {
   companyOverride?: CompanyOverride;
 }
 
-const DASH = '------------------------------------------------';
-
 const s = {
   root: {
     fontFamily: "'Courier New', Courier, monospace",
-    padding: '4px 4px',
-    maxWidth: '55mm',
+    padding: '6px 8px',
+    maxWidth: '58mm',
     margin: '0 auto',
     color: '#000',
     fontSize: '8px',
-    lineHeight: 1.3,
+    lineHeight: 1.25,
   },
   center: { textAlign: 'center' as const },
   bold: { fontWeight: 'bold' as const },
-  divider: {
-    textAlign: 'center' as const,
-    fontSize: '8px',
-    color: '#444',
-    margin: '2px 0',
-    overflow: 'hidden' as const,
-    whiteSpace: 'nowrap' as const,
-    letterSpacing: '-0.5px',
-  },
   companyName: {
-    fontSize: '10px',
+    fontSize: '9px',
     fontWeight: 'bold' as const,
     textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
     textAlign: 'center' as const,
+    marginBottom: '1px',
   },
-  subText: { fontSize: '7px', textAlign: 'center' as const },
-  metaRow: { display: 'flex', justifyContent: 'space-between', gap: '2px' },
-  metaLabel: { fontWeight: 'bold' as const, whiteSpace: 'nowrap' as const },
-  table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: '8px' },
-  thLeft: { textAlign: 'left' as const, fontWeight: 'bold' as const, paddingBottom: '1px', borderBottom: '1px solid #000' },
-  thCenter: { textAlign: 'center' as const, fontWeight: 'bold' as const, paddingBottom: '1px', borderBottom: '1px solid #000' },
-  thRight: { textAlign: 'right' as const, fontWeight: 'bold' as const, paddingBottom: '1px', borderBottom: '1px solid #000' },
-  tdLeft: { textAlign: 'left' as const, paddingTop: '1px', paddingBottom: '1px', verticalAlign: 'top' as const },
-  tdCenter: { textAlign: 'center' as const, paddingTop: '1px', paddingBottom: '1px', verticalAlign: 'top' as const },
-  tdRight: { textAlign: 'right' as const, paddingTop: '1px', paddingBottom: '1px', verticalAlign: 'top' as const },
-  totalRow: { display: 'flex', justifyContent: 'space-between', fontSize: '8px' },
-  grandTotal: { display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' as const },
-  sigLine: { borderBottom: '1px solid #000', minHeight: '16px' },
-  sigLabel: { textAlign: 'center' as const, fontSize: '7px', paddingTop: '1px' },
-  footer: { textAlign: 'center' as const, fontSize: '7px', color: '#444', marginTop: '4px', whiteSpace: 'pre-wrap' as const },
+  addressLine: {
+    fontSize: '7px',
+    textAlign: 'center' as const,
+    lineHeight: 1.3,
+  },
+  headerRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontSize: '8px',
+    marginTop: '6px',
+    marginBottom: '2px',
+  },
+  receiptLabel: { fontWeight: 'bold' as const },
+  receiptNumber: { fontWeight: 'bold' as const },
+  dateRow: {
+    textAlign: 'right' as const,
+    fontSize: '8px',
+    marginBottom: '4px',
+  },
+  infoRow: {
+    fontSize: '8px',
+    marginBottom: '1px',
+  },
+  infoLabel: { fontWeight: 'normal' as const },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse' as const,
+    fontSize: '7.5px',
+    marginTop: '3px',
+  },
+  thLeft: {
+    textAlign: 'left' as const,
+    fontWeight: 'bold' as const,
+    paddingBottom: '2px',
+    paddingRight: '2px',
+  },
+  thCenter: {
+    textAlign: 'center' as const,
+    fontWeight: 'bold' as const,
+    paddingBottom: '2px',
+    paddingLeft: '2px',
+    paddingRight: '2px',
+  },
+  thRight: {
+    textAlign: 'right' as const,
+    fontWeight: 'bold' as const,
+    paddingBottom: '2px',
+    paddingLeft: '2px',
+  },
+  tableHeaderRow: {
+    borderBottom: '1px solid #000',
+  },
+  tdLeft: {
+    textAlign: 'left' as const,
+    paddingTop: '2px',
+    paddingBottom: '2px',
+    paddingRight: '2px',
+    verticalAlign: 'top' as const,
+  },
+  tdCenter: {
+    textAlign: 'center' as const,
+    paddingTop: '2px',
+    paddingBottom: '2px',
+    paddingLeft: '2px',
+    paddingRight: '2px',
+    verticalAlign: 'top' as const,
+    whiteSpace: 'nowrap' as const,
+  },
+  tdRight: {
+    textAlign: 'right' as const,
+    paddingTop: '2px',
+    paddingBottom: '2px',
+    paddingLeft: '2px',
+    verticalAlign: 'top' as const,
+    whiteSpace: 'nowrap' as const,
+  },
+  totalRow: {
+    textAlign: 'right' as const,
+    fontSize: '9px',
+    fontWeight: 'bold' as const,
+    marginTop: '6px',
+    paddingTop: '3px',
+  },
 } as const;
 
 export function PrintableReceipt({ order, companyOverride }: PrintableReceiptProps) {
   const { profile } = useCompanyProfile();
 
   const co = companyOverride || {};
-  const companyName = co.company_name ?? profile?.company_name ?? 'Company Name';
-  const address = co.address ?? profile?.address;
-  const phone = co.contact_phone ?? profile?.contact_phone;
-  const email = co.contact_email ?? profile?.contact_email;
-  const footerText = co.receipt_footer ?? profile?.receipt_footer;
-  const preparedByLabel = co.prepared_by ?? profile?.prepared_by ?? 'Prepared By';
-  const receivedByLabel = co.received_by ?? profile?.received_by ?? 'Received By';
+  const companyName = co.company_name ?? profile?.company_name ?? "GEL'S CONSUMER GOODS TRADING";
+  const address = co.address ?? profile?.address ?? 'Purok Tambis, Curvada\nSan Remigio, Cebu, Philippines 6011';
+  const phone = co.contact_phone ?? profile?.contact_phone ?? 'TEL (032) 167815 / 0936 3446597';
+
+  // Format date as MM/DD/YYYY
+  const formatReceiptDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+  };
+
+  // Format quantity - simple number
+  const formatQuantity = (qty: number) => {
+    return qty.toString();
+  };
+
+  // Format currency without currency symbol, just comma separator
+  const formatPrice = (amount: number) => {
+    return amount.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
 
   return (
     <div id="printable-receipt" style={s.root}>
-      {/* Header */}
-      <div className="receipt-section" style={{ textAlign: 'center', marginBottom: '2px' }}>
+      {/* Header - Company Info */}
+      <div className="receipt-section" style={{ textAlign: 'center', marginBottom: '3px' }}>
         <div style={s.companyName}>{companyName}</div>
-        {address && <div style={s.subText}>{address}</div>}
-        {phone && <div style={s.subText}>Tel: {phone}</div>}
-        {email && <div style={s.subText}>{email}</div>}
+        {address.split('\n').map((line, i) => (
+          <div key={i} style={s.addressLine}>
+            {line}
+          </div>
+        ))}
+        {phone && <div style={s.addressLine}>{phone}</div>}
       </div>
 
-      <div style={s.divider}>{DASH}</div>
-
-      {/* Order Metadata */}
-      <div className="receipt-section" style={{ margin: '2px 0' }}>
-        <div style={s.metaRow}>
-          <span style={s.metaLabel}>Order:</span>
-          <span>{order.order_number}</span>
-        </div>
-        <div style={s.metaRow}>
-          <span style={s.metaLabel}>Date:</span>
-          <span>{formatDate(order.created_at)}</span>
-        </div>
-        {order.profiles?.full_name && (
-          <div style={s.metaRow}>
-            <span style={s.metaLabel}>Collector:</span>
-            <span>{order.profiles.full_name}</span>
-          </div>
-        )}
-        {order.stores?.name && (
-          <div style={s.metaRow}>
-            <span style={s.metaLabel}>Store:</span>
-            <span>{order.stores.name}</span>
-          </div>
-        )}
+      {/* Receipt Type and Number */}
+      <div style={s.headerRow}>
+        <span style={s.receiptLabel}>DELIVERY RECEIPT</span>
+        <span style={s.receiptNumber}>{order.order_number}</span>
       </div>
 
-      <div style={s.divider}>{DASH}</div>
+      {/* Date */}
+      <div style={s.dateRow}>Date: {formatReceiptDate(order.created_at)}</div>
 
-      {/* Item List */}
+      {/* Delivery Info */}
+      <div style={s.infoRow}>
+        <span style={s.infoLabel}>Delivered to: </span>
+        {order.stores?.name || '_________________'}
+      </div>
+      <div style={s.infoRow}>
+        <span style={s.infoLabel}>Address: </span>
+        {order.stores?.address || '_________________'}
+      </div>
+      <div style={s.infoRow}>
+        <span style={s.infoLabel}>TERMS: ________</span>
+      </div>
+
+      {/* Item Table */}
       <table style={s.table}>
         <thead>
-          <tr>
-            <th style={s.thLeft}>Item</th>
+          <tr style={s.tableHeaderRow}>
+            <th style={s.thLeft}>Description</th>
             <th style={s.thCenter}>Qty</th>
+            <th style={s.thRight}>Price</th>
             <th style={s.thRight}>Total</th>
           </tr>
         </thead>
@@ -127,64 +196,16 @@ export function PrintableReceipt({ order, companyOverride }: PrintableReceiptPro
           {order.order_items?.map((item) => (
             <tr key={item.id}>
               <td style={s.tdLeft}>{item.product_name}</td>
-              <td style={s.tdCenter}>{item.quantity}</td>
-              <td style={s.tdRight}>{formatCurrency(item.line_total)}</td>
+              <td style={s.tdCenter}>{formatQuantity(item.quantity)}</td>
+              <td style={s.tdRight}>{formatPrice(item.unit_price)}</td>
+              <td style={s.tdRight}>{formatPrice(item.line_total)}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <div style={s.divider}>{DASH}</div>
-
-      {/* Totals */}
-      <div className="receipt-section" style={{ margin: '2px 0' }}>
-        <div style={s.totalRow}>
-          <span>Subtotal</span>
-          <span>{formatCurrency(order.subtotal)}</span>
-        </div>
-        <div style={s.totalRow}>
-          <span>Tax</span>
-          <span>{formatCurrency(order.tax_amount)}</span>
-        </div>
-        <div style={{ ...s.grandTotal, marginTop: '1px', paddingTop: '1px', borderTop: '1px solid #000' }}>
-          <span>TOTAL</span>
-          <span>{formatCurrency(order.total_amount)}</span>
-        </div>
-      </div>
-
-      {order.notes && (
-        <>
-          <div style={s.divider}>{DASH}</div>
-          <div className="receipt-section" style={{ fontSize: '7px', margin: '2px 0' }}>
-            <span style={s.bold}>Notes:</span> {order.notes}
-          </div>
-        </>
-      )}
-
-      <div style={s.divider}>{DASH}</div>
-
-      {/* Signature Lines */}
-      <div className="receipt-section" style={{ margin: '10px 0 4px' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <tbody>
-            <tr>
-              <td style={{ width: '45%' }}><div style={s.sigLine} /></td>
-              <td style={{ width: '10%' }} />
-              <td style={{ width: '45%' }}><div style={s.sigLine} /></td>
-            </tr>
-            <tr>
-              <td style={s.sigLabel}>{receivedByLabel}</td>
-              <td />
-              <td style={s.sigLabel}>{preparedByLabel}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* Footer */}
-      <div style={s.footer}>
-        {footerText || 'Thank you for your order!'}
-      </div>
+      {/* Total */}
+      <div style={s.totalRow}>Total = {formatPrice(order.total_amount)}</div>
     </div>
   );
 }

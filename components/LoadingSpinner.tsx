@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
+import { Text } from '@/components/ScaledText';
 
 interface LoadingSpinnerProps {
   message?: string;

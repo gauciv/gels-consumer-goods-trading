@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
-  Text,
-  TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   useWindowDimensions,
   ActivityIndicator,
   Image,
+  TextInput as RNTextInput,
 } from 'react-native';
+import { Text } from '@/components/ScaledText';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
@@ -22,7 +22,7 @@ export default function ActivationScreen() {
   const [loading, setLoading] = useState(false);
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<RNTextInput>(null);
 
   // Navigate to home once authenticated (after activation completes)
   useEffect(() => {
@@ -81,12 +81,9 @@ export default function ActivationScreen() {
               style={{ width: 72, height: 72, marginBottom: 12 }}
               resizeMode="contain"
             />
-            <Text className="text-3xl font-bold text-[#5B9BD5] text-center">
-              GELS
-            </Text>
           </View>
           <Text className="text-base text-[#8FAABE] text-center mb-8">
-            Activate your collector account
+            Activate your Sales Personnel account
           </Text>
 
           {/* Error */}
@@ -128,7 +125,7 @@ export default function ActivationScreen() {
             <Text className="text-sm font-medium text-[#8FAABE] mb-2">
               Activation Code
             </Text>
-            <TextInput
+            <RNTextInput
               ref={inputRef}
               className="border border-[#1E3F5E]/60 bg-[#162F4D] rounded-lg px-4 py-4 text-center text-2xl font-mono tracking-widest text-[#E8EDF2]"
               value={code}

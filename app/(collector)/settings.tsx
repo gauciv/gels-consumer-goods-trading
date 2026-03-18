@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   ScrollView,
   Modal,
@@ -9,10 +8,13 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
+import { Text } from '@/components/ScaledText';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/auth';
+import { useFontSize } from '@/lib/font-size';
+import type { FontSizeOption } from '@/lib/font-size';
 import { supabase } from '@/lib/supabase';
 
 interface TeamMember {
@@ -27,6 +29,7 @@ type SettingsTab = 'profile' | 'credits';
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
+  const { fontSize, setFontSize } = useFontSize();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
@@ -55,6 +58,7 @@ export default function SettingsScreen() {
   async function handleLogout() {
     setShowLogoutModal(false);
     await signOut();
+    // Navigation is handled automatically by the auth guard in _layout.tsx
   }
 
   const researchers = teamMembers.filter((m) => m.role === 'Researcher');
@@ -123,8 +127,8 @@ export default function SettingsScreen() {
                     </Text>
                     <Text className="text-sm text-[#8FAABE]/60 mt-1">{user?.email}</Text>
                     <View className="bg-[#5B9BD5]/10 px-3 py-1 rounded-full mt-2">
-                      <Text className="text-[#5B9BD5] text-xs font-medium capitalize">
-                        {user?.role}
+                      <Text className="text-[#5B9BD5] text-xs font-medium">
+                        {user?.role === 'collector' ? 'Sales Personnel' : user?.role}
                       </Text>
                     </View>
                   </View>
@@ -142,6 +146,46 @@ export default function SettingsScreen() {
                   <View className="flex-row justify-between py-3">
                     <Text className="text-sm text-[#8FAABE]">Account Status</Text>
                     <Text className="text-sm text-[#98C379] font-medium">Active</Text>
+                  </View>
+                </View>
+
+                {/* Font Size */}
+                <View className="bg-[#162F4D] rounded-xl p-5 mb-6 border border-[#1E3F5E]/60">
+                  <Text className="text-xs font-semibold text-[#8FAABE]/50 uppercase mb-3">
+                    Font Size
+                  </Text>
+                  <View className="flex-row gap-2">
+                    {([
+                      { key: 'small' as FontSizeOption, label: 'Small', sample: 14 },
+                      { key: 'medium' as FontSizeOption, label: 'Medium', sample: 17 },
+                      { key: 'large' as FontSizeOption, label: 'Large', sample: 20 },
+                    ]).map((opt) => (
+                      <TouchableOpacity
+                        key={opt.key}
+                        className={`flex-1 items-center py-3 rounded-lg border ${
+                          fontSize === opt.key
+                            ? 'bg-[#5B9BD5]/10 border-[#5B9BD5]/60'
+                            : 'bg-[#0D1F33] border-[#1E3F5E]/30'
+                        }`}
+                        onPress={() => setFontSize(opt.key)}
+                      >
+                        <Text
+                          style={{ fontSize: opt.sample }}
+                          className={`font-bold mb-1 ${
+                            fontSize === opt.key ? 'text-[#5B9BD5]' : 'text-[#8FAABE]'
+                          }`}
+                        >
+                          Aa
+                        </Text>
+                        <Text
+                          className={`text-xs ${
+                            fontSize === opt.key ? 'text-[#5B9BD5] font-semibold' : 'text-[#8FAABE]/60'
+                          }`}
+                        >
+                          {opt.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
                 </View>
 

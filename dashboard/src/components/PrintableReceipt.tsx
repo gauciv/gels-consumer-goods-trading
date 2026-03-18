@@ -239,16 +239,15 @@ export function PrintableReceipt({ order, companyOverride }: PrintableReceiptPro
         <div style={s.signatureText}>
           Received the above goods and services<br />in good order and condition
         </div>
-        <div style={s.signatureRow}>
-          <span style={{ whiteSpace: 'nowrap' }}>By:</span>
-          <div style={s.signatureBox}>
-            <div style={s.signatureLine}></div>
-            <div style={s.signatureLabel}>Authorized Signature</div>
-          </div>
-          <div style={s.signatureBox}>
-            <div style={s.signatureLine}></div>
-            <div style={s.signatureLabel}>Customer's Signature Over Printed Name</div>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+          <span style={{ whiteSpace: 'nowrap', fontSize: '7px', paddingBottom: '2px' }}>By:</span>
+          <div style={{ flex: 1, borderBottom: '1px solid #000', minHeight: '16px' }}></div>
+          <div style={{ flex: 1, borderBottom: '1px solid #000', minHeight: '16px' }}></div>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
+          <span style={{ whiteSpace: 'nowrap', fontSize: '7px', visibility: 'hidden' }}>By:</span>
+          <div style={{ flex: 1, textAlign: 'center', fontSize: '6px' }}>Authorized Signature</div>
+          <div style={{ flex: 1, textAlign: 'center', fontSize: '6px' }}>Customer's Signature Over Printed Name</div>
         </div>
       </div>
     </div>

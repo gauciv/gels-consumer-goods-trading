@@ -61,6 +61,7 @@ const s = {
     borderCollapse: 'collapse' as const,
     fontSize: '7.5px',
     marginTop: '3px',
+    border: '1px solid #000',
   },
   thLeft: {
     textAlign: 'left' as const,
@@ -87,18 +88,21 @@ const s = {
     textAlign: 'left' as const,
     padding: '2px',
     verticalAlign: 'top' as const,
+    border: '1px solid #000',
   },
   tdCenter: {
     textAlign: 'center' as const,
     padding: '2px',
     verticalAlign: 'top' as const,
     whiteSpace: 'nowrap' as const,
+    border: '1px solid #000',
   },
   tdRight: {
     textAlign: 'right' as const,
     padding: '2px',
     verticalAlign: 'top' as const,
     whiteSpace: 'nowrap' as const,
+    border: '1px solid #000',
   },
   totalRow: {
     textAlign: 'right' as const,
@@ -109,17 +113,17 @@ const s = {
   },
   signatureSection: {
     marginTop: '12px',
-    textAlign: 'right' as const,
     fontSize: '7px',
   },
   signatureText: {
     fontSize: '7px',
     marginBottom: '8px',
     lineHeight: 1.3,
+    textAlign: 'right' as const,
   },
   signatureLines: {
     display: 'flex',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-start',
     gap: '16px',
     marginTop: '8px',
   },
@@ -233,7 +237,7 @@ export function PrintableReceipt({ order, companyOverride }: PrintableReceiptPro
         <div style={s.signatureText}>
           Received the above goods and services<br />in good order and condition
         </div>
-        <div style={{ marginTop: '8px', fontSize: '7px' }}>By:</div>
+        <div style={{ marginTop: '8px', fontSize: '7px', textAlign: 'left' }}>By:</div>
         <div style={s.signatureLines}>
           <div style={s.signatureBox}>
             <div style={s.signatureLine}></div>

@@ -1,5 +1,6 @@
 import type { Order } from '@/types';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
+import { RECEIPT_FONT_FAMILY } from '@/lib/receiptPrintFont';
 
 interface CompanyOverride {
   company_name?: string | null;
@@ -15,7 +16,7 @@ interface PrintableReceiptProps {
 
 const s = {
   root: {
-    fontFamily: "'Courier New', Courier, monospace",
+    fontFamily: RECEIPT_FONT_FAMILY,
     padding: '6px 8px',
     maxWidth: '58mm',
     margin: '0 auto',

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRealtimeOrders } from '@/hooks/useRealtimeOrders';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { PrintableReceipt } from '@/components/PrintableReceipt';
+import { printReceiptElement } from '@/lib/printReceipt';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
@@ -71,6 +72,7 @@ export function OrdersPage() {
   const actionMenuRef = useRef<HTMLDivElement>(null);
   const statusBarRef = useRef<HTMLDivElement>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
+  const printReceiptRef = useRef<HTMLDivElement>(null);
 
   const { orders, loading, error, refetch } = useRealtimeOrders();
 
@@ -95,7 +97,14 @@ export function OrdersPage() {
   useEffect(() => {
     if (printOrder) {
       const timer = setTimeout(() => {
-        window.print();
+        const receiptEl = printReceiptRef.current?.querySelector('#printable-receipt') as HTMLElement | null;
+
+        if (receiptEl) {
+          printReceiptElement(receiptEl);
+        } else {
+          toast.error('Receipt is not ready for printing');
+        }
+
         setPrintOrder(null);
       }, 100);
       return () => clearTimeout(timer);
@@ -878,7 +887,7 @@ export function OrdersPage() {
 
       {/* Hidden print receipt */}
       {printOrder && (
-        <div className="print-receipt-container hidden">
+        <div ref={printReceiptRef} className="hidden">
           <PrintableReceipt order={printOrder} />
         </div>
       )}

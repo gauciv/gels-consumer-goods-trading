@@ -1,3 +1,5 @@
+import { getReceiptPrintFontCss, RECEIPT_FONT_FAMILY, waitForReceiptFonts } from '@/lib/receiptPrintFont';
+
 /**
  * Prints a receipt by rendering it into a hidden iframe.
  * Uses thermal receipt paper size (58mm width) with auto height
@@ -24,6 +26,7 @@ export function printReceiptElement(receiptEl: HTMLElement) {
 <html>
 <head>
 <style>
+  ${getReceiptPrintFontCss()}
   @page {
     size: 58mm auto;
     margin: 2mm;
@@ -35,6 +38,7 @@ export function printReceiptElement(receiptEl: HTMLElement) {
     background: #fff;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    font-family: ${RECEIPT_FONT_FAMILY};
   }
   * {
     box-sizing: border-box;
@@ -69,8 +73,16 @@ ${receiptEl.outerHTML}
 </html>`);
   doc.close();
 
-  iframe.onload = () => {
+  let printed = false;
+
+  const triggerPrint = async () => {
+    if (printed) return;
+    printed = true;
+
+    await waitForReceiptFonts(doc.fonts);
+
     setTimeout(() => {
+      iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
       // Clean up after print dialog closes
       setTimeout(() => {
@@ -78,4 +90,12 @@ ${receiptEl.outerHTML}
       }, 1000);
     }, 100);
   };
+
+  iframe.onload = () => {
+    void triggerPrint();
+  };
+
+  if (doc.readyState === 'complete') {
+    void triggerPrint();
+  }
 }

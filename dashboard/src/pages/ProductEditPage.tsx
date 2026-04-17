@@ -105,12 +105,17 @@ export function ProductEditPage() {
     }
     const parsedPrice = parseFloat(price);
     const parsedStock = parseInt(stockQuantity, 10) || 0;
+    const parsedCartonSize = cartonSize ? parseInt(cartonSize, 10) : null;
     if (isNaN(parsedPrice) || parsedPrice < 0) {
       setError('Price must be a non-negative number');
       return;
     }
     if (parsedStock < 0) {
       setError('Stock must be non-negative');
+      return;
+    }
+    if (parsedCartonSize !== null && (isNaN(parsedCartonSize) || parsedCartonSize <= 0)) {
+      setError('Carton size must be a positive number');
       return;
     }
 
@@ -241,6 +246,18 @@ export function ProductEditPage() {
                 </p>
               )}
             </div>
+          </div>
+
+          <div>
+            <label className={labelCls}>Carton Size <span className="text-[#8FAABE]/40 font-normal">(pieces per carton)</span></label>
+            <input 
+              type="number" 
+              min="1" 
+              value={cartonSize} 
+              onChange={(e) => setCartonSize(e.target.value)} 
+              placeholder="e.g. 12"
+              className={inputCls} 
+            />
           </div>
 
           <div className="flex items-center gap-2">

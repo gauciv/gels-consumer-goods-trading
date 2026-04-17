@@ -9,6 +9,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { OrdersPage } from '@/pages/OrdersPage';
 import { OrderDetailPage } from '@/pages/OrderDetailPage';
+import { OrderEditPage } from '@/pages/OrderEditPage';
 import { ProductsPage } from '@/pages/ProductsPage';
 import { ProductEditPage } from '@/pages/ProductEditPage';
 import { UsersPage } from '@/pages/UsersPage';
@@ -50,6 +51,7 @@ export default function App() {
                     <Route path="/orders" element={<OrdersPage />} />
                     <Route path="/orders/new" element={<CreateOrderPage />} />
                     <Route path="/orders/:id" element={<OrderDetailPage />} />
+                    <Route path="/orders/:id/edit" element={<OrderEditPage />} />
                     <Route path="/forecast" element={<ForecastPage />} />
                     <Route path="/analytics" element={<AnalyticsPage />} />
                     <Route path="/products" element={<ProductsPage />} />

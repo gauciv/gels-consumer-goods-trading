@@ -19,6 +19,7 @@ const MOCK_ORDER: Order = {
   tax_amount: 0,
   total_amount: 2850,
   notes: null,
+  delivery_address: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
   profiles: { full_name: 'Juan Dela Cruz', email: 'juan@example.com', nickname: 'Juan' },

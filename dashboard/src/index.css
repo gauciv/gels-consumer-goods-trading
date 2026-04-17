@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Print styles for multi-page receipts */
+@media print {
+  .receipt-container {
+    display: block !important;
+  }
+  
+  .receipt-page {
+    page-break-after: always;
+    page-break-inside: avoid;
+    break-after: page;
+    break-inside: avoid;
+  }
+  
+  .receipt-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+  
+  @page {
+    margin: 0;
+    size: 58mm auto;
+  }
+}
+
 @layer base {
   :root {
     --background: 210 33% 96%;

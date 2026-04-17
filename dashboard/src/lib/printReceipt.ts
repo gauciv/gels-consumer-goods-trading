@@ -65,10 +65,23 @@ export function printReceiptElement(receiptEl: HTMLElement) {
     page-break-inside: avoid;
     break-inside: avoid;
   }
+  .receipt-page {
+    page-break-after: always;
+    page-break-inside: avoid;
+    break-after: page;
+    break-inside: avoid;
+  }
+  .receipt-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+  .receipt-container {
+    display: block !important;
+  }
 </style>
 </head>
 <body>
-${receiptEl.outerHTML}
+${receiptEl.innerHTML}
 </body>
 </html>`);
   doc.close();

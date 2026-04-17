@@ -40,6 +40,23 @@ function StockBadge({ qty }: { qty: number }) {
   );
 }
 
+function CartonDisplay({ stockQty, cartonSize }: { stockQty: number; cartonSize: number | null }) {
+  if (!cartonSize || cartonSize <= 0) {
+    return <span className="text-[10px] text-[#8FAABE]/30">—</span>;
+  }
+  
+  const cartons = stockQty / cartonSize;
+  const wholeCartons = Math.floor(cartons);
+  const remainder = stockQty % cartonSize;
+  
+  if (remainder === 0) {
+    return <span className="text-[10px] text-[#8FAABE]/70 tabular-nums">{wholeCartons}</span>;
+  }
+  
+  const percentage = ((remainder / cartonSize) * 100).toFixed(0);
+  return (
+    <span className="text-[10px] text-[#8FAABE]/70 tabular-nums">
+      {wholeCartons}.{percentage}%
 function CartonBadge({ qty, cartonSize }: { qty: number; cartonSize?: number | null }) {
   if (!cartonSize || cartonSize <= 0) {
     return <span className="text-[10px] text-[#8FAABE]/40">—</span>;
@@ -294,6 +311,7 @@ export function ProductsPage() {
                     <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-[#8FAABE]/60 uppercase tracking-wider whitespace-nowrap">
                       Cartons
                     </th>
+                    <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-[#8FAABE]/60 uppercase tracking-wider">Cartons</th>
                     <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-[#8FAABE]/60 uppercase tracking-wider">Status</th>
                     <th className="px-3 py-2.5 text-right text-[10px] font-semibold text-[#8FAABE]/60 uppercase tracking-wider">Actions</th>
                   </tr>

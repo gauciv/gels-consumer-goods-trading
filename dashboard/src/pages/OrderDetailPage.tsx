@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft, Printer, Pencil } from 'lucide-react';
 import { PrintableReceipt } from '@/components/PrintableReceipt';
 import { printReceiptElement } from '@/lib/printReceipt';
 import { statusBadge } from '@/lib/constants';
@@ -21,7 +21,7 @@ export function OrderDetailPage() {
   const receiptRef = useRef<HTMLDivElement>(null);
 
   function handlePrint() {
-    const el = receiptRef.current?.querySelector('#printable-receipt') as HTMLElement | null;
+    const el = receiptRef.current?.querySelector('.receipt-container') as HTMLElement | null;
     if (el) printReceiptElement(el);
   }
 
@@ -125,8 +125,13 @@ export function OrderDetailPage() {
               <div>
                 <p className="text-[10px] text-[#8FAABE]/50 uppercase tracking-wide mb-0.5">Store</p>
                 <p className="text-xs text-[#E8EDF2] font-medium">{order.stores?.name || '—'}</p>
-                {order.stores?.address && (
-                  <p className="text-[10px] text-[#8FAABE]/50">{order.stores.address}</p>
+                {(order.delivery_address || order.stores?.address) && (
+                  <p className="text-[10px] text-[#8FAABE]/50">
+                    {order.delivery_address || order.stores.address}
+                  </p>
+                )}
+                {order.delivery_address && order.stores?.address && (
+                  <p className="text-[9px] text-[#E5C07B] italic">(Custom address)</p>
                 )}
               </div>
               {order.notes && (
@@ -161,10 +166,17 @@ export function OrderDetailPage() {
               )}
               <button
                 onClick={handlePrint}
-                className="bg-[#162F4D] border border-[#1E3F5E]/60 text-[#8FAABE]/70 text-xs px-3 py-1.5 rounded-md hover:bg-[#1A3755] flex items-center gap-1.5 ml-auto"
+                className="bg-[#162F4D] border border-[#1E3F5E]/60 text-[#8FAABE]/70 text-xs px-3 py-1.5 rounded-md hover:bg-[#1A3755] flex items-center gap-1.5"
               >
                 <Printer size={12} />
                 Print Receipt
+              </button>
+              <button
+                onClick={() => navigate(`/orders/${order.id}/edit`)}
+                className="bg-[#162F4D] border border-[#1E3F5E]/60 text-[#8FAABE]/70 text-xs px-3 py-1.5 rounded-md hover:bg-[#1A3755] flex items-center gap-1.5"
+              >
+                <Pencil size={12} />
+                Edit Order
               </button>
             </div>
           </div>

@@ -70,6 +70,7 @@ export interface Order {
   tax_amount: number;
   total_amount: number;
   notes: string | null;
+  delivery_address: string | null;
   created_at: string;
   updated_at: string;
   profiles?: { full_name: string; email: string; nickname?: string | null } | null;

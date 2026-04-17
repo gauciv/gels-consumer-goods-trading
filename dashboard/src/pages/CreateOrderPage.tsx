@@ -222,6 +222,7 @@ export function CreateOrderPage() {
                 value={selectedStore}
                 onChange={(e) => setSelectedStore(e.target.value)}
                 className={cn(inputCls, 'appearance-none')}
+                aria-label="Select store"
               >
                 <option value="">Walk-in (No store)</option>
                 {stores.map((s) => (
@@ -268,6 +269,7 @@ export function CreateOrderPage() {
                         onClick={() => updateQty(item.product_id, -1)}
                         disabled={item.quantity <= 1}
                         className="w-6 h-6 rounded bg-[#0D1F33] flex items-center justify-center text-[#8FAABE]/50 hover:text-[#E8EDF2] disabled:opacity-30 transition-colors"
+                        aria-label="Decrease quantity"
                       >
                         <Minus size={10} />
                       </button>
@@ -276,6 +278,7 @@ export function CreateOrderPage() {
                         onClick={() => updateQty(item.product_id, 1)}
                         disabled={item.quantity >= item.stock_quantity}
                         className="w-6 h-6 rounded bg-[#0D1F33] flex items-center justify-center text-[#8FAABE]/50 hover:text-[#E8EDF2] disabled:opacity-30 transition-colors"
+                        aria-label="Increase quantity"
                       >
                         <Plus size={10} />
                       </button>
@@ -284,6 +287,7 @@ export function CreateOrderPage() {
                     <button
                       onClick={() => removeFromCart(item.product_id)}
                       className="p-1 text-[#8FAABE]/30 hover:text-[#E06C75] transition-colors"
+                      aria-label="Remove from cart"
                     >
                       <Trash2 size={12} />
                     </button>

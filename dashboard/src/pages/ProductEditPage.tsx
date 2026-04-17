@@ -26,6 +26,7 @@ export function ProductEditPage() {
   const [sku, setSku] = useState('');
   const [price, setPrice] = useState('');
   const [stockQuantity, setStockQuantity] = useState('0');
+  const [cartonSize, setCartonSize] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -47,6 +48,7 @@ export function ProductEditPage() {
         setSku(p.sku || '');
         setPrice(p.price?.toString() || '');
         setStockQuantity(p.stock_quantity?.toString() || '0');
+        setCartonSize(p.carton_size?.toString() || '');
         setIsActive(p.is_active);
       } catch {
         toast.error('Product not found');
@@ -66,12 +68,17 @@ export function ProductEditPage() {
     }
     const parsedPrice = parseFloat(price);
     const parsedStock = parseInt(stockQuantity, 10) || 0;
+    const parsedCartonSize = cartonSize ? parseInt(cartonSize, 10) : null;
     if (isNaN(parsedPrice) || parsedPrice < 0) {
       setError('Price must be a non-negative number');
       return;
     }
     if (parsedStock < 0) {
       setError('Stock must be non-negative');
+      return;
+    }
+    if (parsedCartonSize !== null && (isNaN(parsedCartonSize) || parsedCartonSize <= 0)) {
+      setError('Carton size must be a positive number');
       return;
     }
 
@@ -84,6 +91,7 @@ export function ProductEditPage() {
       sku: sku.trim() || generateSku(name.trim()),
       price: parsedPrice,
       stock_quantity: parsedStock,
+      carton_size: parsedCartonSize,
       is_active: isActive,
     };
 
@@ -177,6 +185,18 @@ export function ProductEditPage() {
               <label className={labelCls}>Stock Qty</label>
               <input type="number" min="0" value={stockQuantity} onChange={(e) => setStockQuantity(e.target.value)} className={inputCls} aria-label="Stock quantity" />
             </div>
+          </div>
+
+          <div>
+            <label className={labelCls}>Carton Size <span className="text-[#8FAABE]/40 font-normal">(pieces per carton)</span></label>
+            <input 
+              type="number" 
+              min="1" 
+              value={cartonSize} 
+              onChange={(e) => setCartonSize(e.target.value)} 
+              placeholder="e.g. 12"
+              className={inputCls} 
+            />
           </div>
 
           <div className="flex items-center gap-2">

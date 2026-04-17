@@ -342,6 +342,7 @@ export function OrdersPage() {
                   setPage(1);
                 }}
                 className="w-full text-xs bg-[#0D1F33] border border-[#1E3F5E]/60 rounded px-2 py-1.5 text-[#E8EDF2] focus:outline-none focus:ring-1 focus:ring-[#5B9BD5] mb-3"
+                aria-label="Filter by store"
               >
                 <option value="all">All stores</option>
                 {stores.map(([id, name]) => (
@@ -359,6 +360,7 @@ export function OrdersPage() {
                   setPage(1);
                 }}
                 className="w-full text-xs bg-[#0D1F33] border border-[#1E3F5E]/60 rounded px-2 py-1.5 text-[#E8EDF2] focus:outline-none focus:ring-1 focus:ring-[#5B9BD5]"
+                aria-label="Filter by collector"
               >
                 <option value="all">All collectors</option>
                 {collectors.map(([id, name]) => (
@@ -389,6 +391,7 @@ export function OrdersPage() {
             value={sortMode}
             onChange={(e) => { setSortMode(e.target.value as SortMode); setPage(1); }}
             className="text-xs bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg px-2 py-2 text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#5B9BD5] cursor-pointer"
+            aria-label="Sort orders"
           >
             <option value="newest">Newest first</option>
             <option value="oldest">Oldest first</option>
@@ -482,6 +485,7 @@ export function OrdersPage() {
                   <button
                     onClick={() => setCalendarMonth((m) => subMonths(m, 1))}
                     className="p-1 rounded text-[#8FAABE]/60 hover:text-[#E8EDF2] hover:bg-[#1A3755] transition-colors"
+                    aria-label="Previous month"
                   >
                     <ChevronLeft size={14} />
                   </button>
@@ -491,6 +495,7 @@ export function OrdersPage() {
                   <button
                     onClick={() => setCalendarMonth((m) => addMonths(m, 1))}
                     className="p-1 rounded text-[#8FAABE]/60 hover:text-[#E8EDF2] hover:bg-[#1A3755] transition-colors"
+                    aria-label="Next month"
                   >
                     <ChevronRight size={14} />
                   </button>
@@ -575,26 +580,29 @@ export function OrdersPage() {
         className="bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg p-2 mb-3 flex gap-1.5 overflow-x-auto flex-wrap"
         onKeyDown={handleStatusKeyDown}
       >
-        {statusFilters.map((status) => (
-          <button
-            key={status}
-            role="tab"
-            tabIndex={statusFilter === status ? 0 : -1}
-            aria-selected={statusFilter === status}
-            onClick={() => handleStatusChange(status)}
-            className={cn(
-              'px-2.5 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5B9BD5]',
-              statusFilter === status
-                ? 'bg-[#5B9BD5] text-white'
-                : 'text-[#E8EDF2]/80 hover:bg-[#1A3755]'
-            )}
-          >
-            <span className="capitalize">{status === 'all' ? 'All' : status}</span>
-            <span className={cn('text-[10px] px-1 rounded', statusFilter === status ? 'bg-white/20' : 'bg-[#0D1F33]')}>
-              {statusCounts[status] ?? 0}
-            </span>
-          </button>
-        ))}
+        {statusFilters.map((status) => {
+          const isSelected = statusFilter === status;
+          return (
+            <button
+              key={status}
+              role="tab"
+              tabIndex={isSelected ? 0 : -1}
+              {...(isSelected ? { 'aria-selected': true } : { 'aria-selected': false })}
+              onClick={() => handleStatusChange(status)}
+              className={cn(
+                'px-2.5 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5B9BD5]',
+                isSelected
+                  ? 'bg-[#5B9BD5] text-white'
+                  : 'text-[#E8EDF2]/80 hover:bg-[#1A3755]'
+              )}
+            >
+              <span className="capitalize">{status === 'all' ? 'All' : status}</span>
+              <span className={cn('text-[10px] px-1 rounded', isSelected ? 'bg-white/20' : 'bg-[#0D1F33]')}>
+                {statusCounts[status] ?? 0}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Main content area */}

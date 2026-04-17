@@ -40,6 +40,27 @@ function StockBadge({ qty }: { qty: number }) {
   );
 }
 
+function CartonDisplay({ stockQty, cartonSize }: { stockQty: number; cartonSize: number | null }) {
+  if (!cartonSize || cartonSize <= 0) {
+    return <span className="text-[10px] text-[#8FAABE]/30">—</span>;
+  }
+  
+  const cartons = stockQty / cartonSize;
+  const wholeCartons = Math.floor(cartons);
+  const remainder = stockQty % cartonSize;
+  
+  if (remainder === 0) {
+    return <span className="text-[10px] text-[#8FAABE]/70 tabular-nums">{wholeCartons}</span>;
+  }
+  
+  const percentage = ((remainder / cartonSize) * 100).toFixed(0);
+  return (
+    <span className="text-[10px] text-[#8FAABE]/70 tabular-nums">
+      {wholeCartons}.{percentage}%
+    </span>
+  );
+}
+
 export function ProductsPage() {
   const {
     products,
@@ -193,6 +214,7 @@ export function ProductsPage() {
           value={stockFilter}
           onChange={(e) => handleStockFilter(e.target.value as StockFilter)}
           className="text-xs bg-[#162F4D] border border-[#1E3F5E]/60 rounded-lg px-2 py-2 text-[#E8EDF2] focus:outline-none focus:ring-2 focus:ring-[#5B9BD5] cursor-pointer"
+          aria-label="Filter by stock level"
         >
           {stockOptions.map((opt) => (
             <option key={opt.key} value={opt.key}>{opt.label}</option>
@@ -278,6 +300,7 @@ export function ProductsPage() {
                     <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-[#8FAABE]/60 uppercase tracking-wider cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort('stock_quantity')}>
                       Stock <SortIcon column="stock_quantity" />
                     </th>
+                    <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-[#8FAABE]/60 uppercase tracking-wider">Cartons</th>
                     <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-[#8FAABE]/60 uppercase tracking-wider">Status</th>
                     <th className="px-3 py-2.5 text-right text-[10px] font-semibold text-[#8FAABE]/60 uppercase tracking-wider">Actions</th>
                   </tr>
@@ -308,6 +331,7 @@ export function ProductsPage() {
                       </td>
                       <td className="px-3 py-2 text-xs font-semibold text-[#E8EDF2] text-right font-mono tabular-nums">{formatCurrency(product.price)}</td>
                       <td className="px-3 py-2 text-center"><StockBadge qty={product.stock_quantity} /></td>
+                      <td className="px-3 py-2 text-center"><CartonDisplay stockQty={product.stock_quantity} cartonSize={product.carton_size} /></td>
                       <td className="px-3 py-2 text-center">
                         <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-medium', product.is_active ? 'bg-[#98C379]/10 text-[#98C379]' : 'bg-[#8FAABE]/10 text-[#8FAABE]/50')}>
                           {product.is_active ? 'active' : 'inactive'}

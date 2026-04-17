@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Order } from '@/types';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { supabase } from '@/lib/supabase';
+import { RECEIPT_FONT_FAMILY } from '@/lib/receiptPrintFont';
 
 interface CompanyOverride {
   company_name?: string | null;
@@ -17,16 +18,17 @@ interface PrintableReceiptProps {
 
 const s = {
   root: {
-    fontFamily: "'Courier New', Courier, monospace",
+    fontFamily: RECEIPT_FONT_FAMILY,
     padding: '6px 8px',
     maxWidth: '58mm',
     margin: '0 auto',
     color: '#000',
     fontSize: '8px',
     lineHeight: 1.25,
+    fontWeight: 'bold' as const,
   },
   center: { textAlign: 'center' as const },
-  bold: { fontWeight: 'bold' as const },
+  bold: { fontWeight: 900 as const },
   companyName: {
     fontSize: '9.9px',
     fontWeight: 'bold' as const,
@@ -38,6 +40,7 @@ const s = {
     fontSize: '7px',
     textAlign: 'left' as const,
     lineHeight: 1.3,
+    fontWeight: 'bold' as const,
   },
   headerRow: {
     display: 'flex',
@@ -45,41 +48,45 @@ const s = {
     fontSize: '8px',
     marginTop: '6px',
     marginBottom: '2px',
+    fontWeight: 900 as const,
   },
-  receiptLabel: { fontWeight: 'bold' as const },
-  receiptNumber: { fontWeight: 'bold' as const },
+  receiptLabel: { fontWeight: 900 as const },
+  receiptNumber: { fontWeight: 900 as const },
   dateRow: {
     textAlign: 'right' as const,
     fontSize: '8px',
     marginBottom: '4px',
+    fontWeight: 'bold' as const,
   },
   infoRow: {
     fontSize: '8px',
     marginBottom: '1px',
+    fontWeight: 'bold' as const,
   },
-  infoLabel: { fontWeight: 'normal' as const },
+  infoLabel: { fontWeight: 900 as const },
   table: {
     width: '100%',
     borderCollapse: 'collapse' as const,
     fontSize: '7.5px',
     marginTop: '3px',
     border: '1px solid #000',
+    fontWeight: 'bold' as const,
   },
   thLeft: {
     textAlign: 'left' as const,
-    fontWeight: 'bold' as const,
+    fontWeight: 900 as const,
     padding: '2px',
     border: '1px solid #000',
   },
   thCenter: {
     textAlign: 'center' as const,
-    fontWeight: 'bold' as const,
+    fontWeight: 900 as const,
     padding: '2px',
     border: '1px solid #000',
   },
   thRight: {
     textAlign: 'right' as const,
-    fontWeight: 'bold' as const,
+    fontWeight: 900 as const,
     padding: '2px',
     border: '1px solid #000',
   },
@@ -90,23 +97,26 @@ const s = {
     textAlign: 'left' as const,
     padding: '2px',
     verticalAlign: 'top' as const,
+    fontWeight: 'bold' as const,
   },
   tdCenter: {
     textAlign: 'center' as const,
     padding: '2px',
     verticalAlign: 'top' as const,
     whiteSpace: 'nowrap' as const,
+    fontWeight: 'bold' as const,
   },
   tdRight: {
     textAlign: 'right' as const,
     padding: '2px',
     verticalAlign: 'top' as const,
     whiteSpace: 'nowrap' as const,
+    fontWeight: 'bold' as const,
   },
   totalRow: {
     textAlign: 'right' as const,
     fontSize: '9px',
-    fontWeight: 'bold' as const,
+    fontWeight: 900 as const,
     marginTop: '6px',
     paddingTop: '3px',
   },
@@ -114,18 +124,21 @@ const s = {
     marginTop: '12px',
     fontSize: '7px',
     padding: '6px',
+    fontWeight: 'bold' as const,
   },
   signatureText: {
     fontSize: '7px',
     marginBottom: '12px',
     lineHeight: 1.3,
     textAlign: 'left' as const,
+    fontWeight: 'bold' as const,
   },
   signatureRow: {
     display: 'flex',
     alignItems: 'flex-end',
     gap: '12px',
     fontSize: '7px',
+    fontWeight: 'bold' as const,
   },
   signatureBox: {
     flex: 1,
@@ -143,6 +156,7 @@ const s = {
   signatureLabel: {
     fontSize: '6px',
     textAlign: 'center' as const,
+    fontWeight: 'bold' as const,
   },
 } as const;
 
@@ -360,6 +374,15 @@ export function PrintableReceipt({ order, companyOverride }: PrintableReceiptPro
         </div>
         <div style={s.infoRow}>
           <span style={s.infoLabel}>TERMS: ________</span>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+          <span style={{ whiteSpace: 'nowrap', fontSize: '7px', paddingBottom: '2px', fontWeight: 'bold' }}>By:</span>
+          <div style={{ flex: 1, borderBottom: '1px solid #000', minHeight: '16px' }}></div>
+          <div style={{ flex: 1, borderBottom: '1px solid #000', minHeight: '16px' }}></div>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
+          <span style={{ whiteSpace: 'nowrap', fontSize: '7px', visibility: 'hidden' }}>By:</span>
+          <div style={{ flex: 1, textAlign: 'center', fontSize: '6px', fontWeight: 'bold' }}>Authorized Signature</div>
+          <div style={{ flex: 1, textAlign: 'center', fontSize: '6px', fontWeight: 'bold' }}>Customer's Signature Over Printed Name</div>
         </div>
 
         {/* Item Table */}

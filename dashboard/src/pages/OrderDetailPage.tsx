@@ -30,7 +30,7 @@ export function OrderDetailPage() {
       try {
         const { data, error } = await supabase
           .from('orders')
-          .select('*, profiles:collector_id(full_name, email, nickname), stores:store_id(name, address), order_items(*)')
+          .select('*, profiles:collector_id(full_name, email, nickname), stores:store_id(name, address, contact_phone), order_items(*)')
           .eq('id', id)
           .single();
         if (error) throw error;
@@ -127,7 +127,7 @@ export function OrderDetailPage() {
                 <p className="text-xs text-[#E8EDF2] font-medium">{order.stores?.name || '—'}</p>
                 {(order.delivery_address || order.stores?.address) && (
                   <p className="text-[10px] text-[#8FAABE]/50">
-                    {order.delivery_address || order.stores.address}
+                    {order.delivery_address || order.stores?.address}
                   </p>
                 )}
                 {order.delivery_address && order.stores?.address && (
